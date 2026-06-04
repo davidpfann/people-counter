@@ -136,3 +136,63 @@ def zpracuj_kliknuti(smer):
         else:
             if st.session_state.scitani_data:
                 posledni_index = len(st.session_state.scitani_data) - 1
+                id_skupiny = st.session_state.scitani_data[posledni_index]["Timestamp"].replace(" ", "_")
+                st.session_state.scitani_data[posledni_index]["Je_skupina"] = True
+                st.session_state.scitani_data[posledni_index]["ID_skupiny"] = id_skupiny
+                st.session_state.aktualni_id_skupiny = id_skupiny
+            else:
+                id_skupiny = timestamp_str.replace(" ", "_")
+                st.session_state.aktualni_id_skupiny = id_skupiny
+    else:
+        st.session_state.aktualni_id_skupiny = None
+
+    zaznam = {
+        "Timestamp": timestamp_str,
+        "Scitac": scitac,
+        "Smer": smer,
+        "Mod_pohybu": v_mod_dopravy,
+        "Vek": v_vek if v_vek != "– (Nezadáno)" else None,
+        "Pes": preved_stav(v_ma_psa),
+        "Nakup": preved_stav(v_ma_nakup),
+        "Aktovka": preved_stav(v_ma_aktovku),
+        "Otocka": preved_stav(v_je_otocka),
+        "Je_skupina": je_skupina,
+        "ID_skupiny": id_skupiny,
+        "Poznamka": v_poznamka if v_poznamka else None
+    }
+    
+    st.session_state.scitani_data.append(zaznam)
+    
+    # Reset prvků
+    st.session_state.mod_dopravy_key = "Chodec 🚶"
+    st.session_state.ve_skupine_key = False
+    st.session_state.ma_psa_key = "–"
+    st.session_state.ma_nakup_key = "–"
+    st.session_state.ma_aktovku_key = "–"
+    st.session_state.je_otocka_key = "–"
+    st.session_state.vek_key = "– (Nezadáno)"
+    st.session_state.poznamka_key = ""
+
+# Zobrazení chybové hlášky
+if st.session_state.get("chyba_scitace", False):
+    st.error("❌ Před zaznamenáním průchodu musíte dole vybrat své JMÉNO!")
+
+# --- AKČNÍ TLAČÍTKA (S opraveným názvem funkce) ---
+st.write("") 
+col_prichod, col_odchod = st.columns(2)
+
+with col_prichod:
+    st.button("📥 PŘÍCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("prichod",))
+
+with col_odchod:
+    st.button("📤 ODCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("odchod",))
+
+# --- EXPORT VÝSLEDKŮ ---
+if st.session_state.scitani_data:
+    st.markdown("---")
+    df = pd.DataFrame(st.session_state.scitani_data)
+    st.write(f"Celkem zaznamenáno průchodů: **{len(df)}**")
+    st.dataframe(df.tail(3), use_container_width=True)
+    
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Stáhnout kompletní CSV", csv, "scitani_chodcu.csv", "text/csv", use_container_width=True)
