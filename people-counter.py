@@ -41,7 +41,7 @@ if "mod_dopravy_key" not in st.session_state:
 # Mód pohybu
 mod_dopravy = st.radio(
     "Mód pohybu", 
-    ["Chodec 🚶", "Běžec <b>🏃</b>", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
+    ["Chodec 🚶", "Běžec 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
     horizontal=True, 
     key="mod_dopravy_key",
     label_visibility="collapsed"
@@ -50,32 +50,32 @@ mod_dopravy = st.radio(
 # Skupina
 ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", key="ve_skupine_key")
 
-# --- PARAMETRY NA JEDEN ŘÁDEK ---
+# --- PARAMETRY NA JEDEN ŘÁDEK (Čisté řešení bez HTML) ---
 # 1. Pes
 r1_col1, r1_col2 = st.columns([1, 2])
 with r1_col1:
-    st.markdown("<div style='padding-top: 5px;'><b>Pes? 🐕</b></div>", unsafe_html=True)
+    st.write("**Pes? 🐕**")
 with r1_col2:
     ma_psa = st.radio("Pes", ["–", "Ano", "Ne"], horizontal=True, key="ma_psa_key", label_visibility="collapsed")
 
 # 2. Nákup
 r2_col1, r2_col2 = st.columns([1, 2])
 with r2_col1:
-    st.markdown("<div style='padding-top: 5px;'><b>Nákup? 🛍️</b></div>", unsafe_html=True)
+    st.write("**Nákup? 🛍️**")
 with r2_col2:
     ma_nakup = st.radio("Nákup", ["–", "Ano", "Ne"], horizontal=True, key="ma_nakup_key", label_visibility="collapsed")
 
 # 3. Aktovka
 r3_col1, r3_col2 = st.columns([1, 2])
 with r3_col1:
-    st.markdown("<div style='padding-top: 5px;'><b>Aktovka? 🎒</b></div>", unsafe_html=True)
+    st.write("**Aktovka? 🎒**")
 with r3_col2:
     ma_aktovku = st.radio("Aktovka", ["–", "Ano", "Ne"], horizontal=True, key="ma_aktovku_key", label_visibility="collapsed")
 
 # 4. Otočka
 r4_col1, r4_col2 = st.columns([1, 2])
 with r4_col1:
-    st.markdown("<div style='padding-top: 5px;'><b>Otočka? 🔄</b></div>", unsafe_html=True)
+    st.write("**Otočka? 🔄**")
 with r4_col2:
     je_otocka = st.radio("Otočka", ["–", "Ano", "Ne"], horizontal=True, key="je_otocka_key", label_visibility="collapsed")
 
