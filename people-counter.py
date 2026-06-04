@@ -4,19 +4,6 @@ import pandas as pd
 
 st.set_page_config(layout="centered")
 
-# --- NAČTENÍ SEZNAMU JMÉNA Z GITHUB / LOKÁLNÊ ---
-@st.cache_data(ttl=60)  # Kešuje seznam na 1 minutu
-def nacti_scitace():
-    default_list = ["– (Vyber jméno)", "Sčítač 1", "Sčítač 2"]
-    try:
-        with open("scitaci.txt", "r", encoding="utf-8") as f:
-            lines = [line.strip() for line in f.readlines() if line.strip()]
-            return lines if lines else default_list
-    except Exception:
-        return default_list
-
-seznam_scitacu = nacti_scitace()
-
 # --- INICIALIZACE STAVŮ (A RESET LOGIKY) ---
 if "scitani_data" not in st.session_state:
     st.session_state.scitani_data = []
@@ -126,6 +113,19 @@ def zapis_zaznam(smer):
     st.toast(f"Zapsán {smer.upper()}: {mod_dopravy}", icon="✅")
     
     reset_formulkare()
+
+# --- NAČTENÍ SEZNAMU JMÉNA Z GITHUB / LOKÁLNÊ ---
+@st.cache_data(ttl=60)  # Kešuje seznam na 1 minutu
+def nacti_scitace():
+    default_list = ["Vyberméno sčítače", "Sčítač 1", "Sčítač 2"]
+    try:
+        with open("scitaci.txt", "r", encoding="utf-8") as f:
+            lines = [line.strip() for line in f.readlines() if line.strip()]
+            return lines if lines else default_list
+    except Exception:
+        return default_list
+
+seznam_scitacu = nacti_scitace()
 
 # --- AKČNÍ TLAČÍTKA ---
 st.write("") 
