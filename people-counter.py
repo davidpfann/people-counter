@@ -41,7 +41,7 @@ if "mod_dopravy_key" not in st.session_state:
 # Mód pohybu
 mod_dopravy = st.radio(
     "Mód pohybu", 
-    ["Chodec 🚶", "Běžec 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
+    ["Chodec 🚶", "Běžec <b>🏃</b>", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
     horizontal=True, 
     key="mod_dopravy_key",
     label_visibility="collapsed"
@@ -134,4 +134,37 @@ def zapis_zaznam(smer):
         "Pes": preved_stav(ma_psa),
         "Nakup": preved_stav(ma_nakup),
         "Aktovka": preved_stav(ma_aktovku),
-        "Otocka": preved_stav(je
+        "Otocka": preved_stav(je_otocka),
+        "Je_skupina": je_skupina,
+        "ID_skupiny": id_skupiny,
+        "Poznamka": poznamka if poznamka else None
+    }
+    
+    st.session_state.scitani_data.append(zaznam)
+    st.toast(f"Zapsán {smer.upper()}: {mod_dopravy}", icon="✅")
+    
+    reset_formulkare()
+
+# --- AKČNÍ TLAČÍTKA ---
+st.write("") 
+col_prichod, col_odchod = st.columns(2)
+
+with col_prichod:
+    if st.button("📥 PŘÍCHOD", use_container_width=True, type="primary"):
+        zapis_zaznam("prichod")
+        st.rerun()
+
+with col_odchod:
+    if st.button("📤 ODCHOD", use_container_width=True, type="primary"):
+        zapis_zaznam("odchod")
+        st.rerun()
+
+# --- EXPORT VÝSLEDKŮ ---
+if st.session_state.scitani_data:
+    st.markdown("---")
+    df = pd.DataFrame(st.session_state.scitani_data)
+    st.write(f"Celkem zaznamenáno průchodů: **{len(df)}**")
+    st.dataframe(df.tail(3), use_container_width=True)
+    
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Stáhnout kompletní CSV", csv, "scitani_chodcu.csv", "text/csv", use_container_width=True)
