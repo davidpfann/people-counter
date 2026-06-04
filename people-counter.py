@@ -1,45 +1,82 @@
 import streamlit as st
 import datetime
 import pandas as pd
+import requests
 
 st.set_page_config(layout="centered")
-st.title("Sčítání chodců: PŘÍCHOD / ODCHOD")
 
-# Inicializace stavů aplikace v paměti
+# --- NAČTENÍ SEZNAMU JMÉNA Z GITHUB / LOKÁLNĚ ---
+@st.cache_data(ttl=60)  # Kešuje seznam na 1 minutu, aby se nestahoval při každém kliku
+def nacti_scitace():
+    default_list = ["– (Vyber jméno)", "Sčítač 1", "Sčítač 2"]
+    try:
+        # Streamlit zkusí přečíst lokální soubor scitaci.txt v repozitáři
+        with open("scitaci.txt", "r", encoding="utf-8") as f:
+            lines = [line.strip() for line in f.readlines() if line.strip()]
+            return lines if lines else default_list
+    except Exception:
+        return default_list
+
+seznam_scitacu = nacti_scitace()
+
+# --- INICIALIZACE STAVŮ (A RESET LOGIKY) ---
 if "scitani_data" not in st.session_state:
     st.session_state.scitani_data = []
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
-st.subheader("Parametry chodce")
+# Funkce, která vrátí všechny ovládací prvky do výchozího stavu
+def reset_formulkare():
+    st.session_state.mod_dopravy_key = "Chodec 🚶"
+    st.session_state.ve_skupine_key = False
+    st.session_state.ma_psa_key = "–"
+    st.session_state.ma_nakup_key = "–"
+    st.session_state.ma_aktovku_key = "–"
+    st.session_state.je_otocka_key = "–"
+    st.session_state.vek_key = "– (Nezadáno)"
+    st.session_state.poznamka_key = ""
 
-mod_dopravy = st.radio("Mód pohybu", ["Chodec 🚶", "Běžec 🏃", "Na kole 🚴", "Koloběžka 🛴"], horizontal=True)
+# Inicializace klíčů, pokud ještě neexistují
+if "mod_dopravy_key" not in st.session_state:
+    reset_formulkare()
 
-# Sekce pro skupiny
-ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", value=False)
+# --- ROZHRANÍ APLIKACE (BEZ NADPISŮ) ---
 
-st.subheader("Podrobné parametry (pokud je čas)")
-st.caption("Pokud nestíháte, nechte nastavené '–' (Nezadáno).")
+# 1. Výběr sčítače na samém úvodu
+scitac = st.selectbox("Jméno sčítače", seznam_scitacu)
 
-# Bezpečné řešení přepínačů pomocí st.radio s horizontálním rozložením
+# Vizuální oddělení, které nezabírá místo
+st.write("")
+
+# Mód pohybu (bez nadpisu, stačí popisek uvnitř)
+mod_dopravy = st.radio("Mód pohybu", ["Chodec 🚶", "Běžec 🏃", "Na kole 🚴", "Koloběžka 🛴"], horizontal=True, key="mod_dopravy_key")
+
+# Skupina
+ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", key="ve_skupine_key")
+
+# Parametry uspořádané: NEZADÁNO (–) - ANO - NE
 c1, c2, c3 = st.columns(3)
 with c1:
-    ma_psa = st.radio("Pes? 🐕", ["Ano", "–", "Ne"], index=1, horizontal=True)
+    ma_psa = st.radio("Pes? 🐕", ["–", "Ano", "Ne"], horizontal=True, key="ma_psa_key")
 with c2:
-    ma_nakup = st.radio("Nákup? 🛍️", ["Ano", "–", "Ne"], index=1, horizontal=True)
+    ma_nakup = st.radio("Nákup? 🛍️", ["–", "Ano", "Ne"], horizontal=True, key="ma_nakup_key")
 with c3:
-    ma_aktovku = st.radio("Aktovka? 🎒", ["Ano", "–", "Ne"], index=1, horizontal=True)
+    ma_aktovku = st.radio("Aktovka? 🎒", ["–", "Ano", "Ne"], horizontal=True, key="ma_aktovku_key")
 
 col_extra1, col_extra2 = st.columns(2)
 with col_extra1:
-    je_otocka = st.radio("Otočka/Návrat? 🔄", ["Ano", "–", "Ne"], index=1, horizontal=True)
+    je_otocka = st.radio("Otočka/Návrat? 🔄", ["–", "Ano", "Ne"], horizontal=True, key="je_otocka_key")
 with col_extra2:
-    vek = st.selectbox("Věk", ["– (Nezadáno)", "Produktivní", "Dítě", "Teenager", "Senior"])
+    vek = st.selectbox("Věk", ["– (Nezadáno)", "Produktivní", "Dítě", "Teenager", "Senior"], key="vek_key")
 
-poznamka = st.text_input("Obecná poznámka")
+poznamka = st.text_input("Obecná poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key")
 
-# --- LOGIKA ZÁPISU (PŘÍCHOD / ODCHOD) ---
+# --- LOGIKA ZÁPISU ---
 def zapis_zaznam(smer):
+    if scitac == "– (Vyber jméno)":
+        st.error("❌ Před zaznamenáním průchodu musíte vybrat své JMÉNO na začátku stránky!")
+        return
+
     nyni = datetime.datetime.now()
     timestamp_str = nyni.strftime("%Y-%m-%d %H:%M:%S")
     
@@ -70,7 +107,8 @@ def zapis_zaznam(smer):
 
     zaznam = {
         "Timestamp": timestamp_str,
-        "Smer": smer,  # Zapíše "prichod" nebo "odchod"
+        "Scitac": scitac,
+        "Smer": smer,
         "Mod_pohybu": mod_dopravy,
         "Vek": vek if vek != "– (Nezadáno)" else None,
         "Pes": preved_stav(ma_psa),
@@ -83,24 +121,28 @@ def zapis_zaznam(smer):
     }
     
     st.session_state.scitani_data.append(zaznam)
+    st.toast(f"Zapsán {smer.upper()}: {mod_dopravy}", icon="✅")
     
-    info_skupina = f" (Skupina)" if je_skupina else ""
-    st.toast(f"Zapsán {smer.upper()}: {mod_dopravy}{info_skupina}", icon="✅")
+    # Spuštění resetu formuláře pro další kliknutí
+    reset_formulkare()
 
-# --- AKČNÍ TLAČÍTKA (Čára smazána, texty upraveny) ---
+# --- AKČNÍ TLAČÍTKA ---
+st.write("") # Drobné odskočení od formuláře místo tlusté čáry
 col_prichod, col_odchod = st.columns(2)
 
 with col_prichod:
     if st.button("📥 PŘÍCHOD", use_container_width=True, type="primary"):
         zapis_zaznam("prichod")
+        st.rerun() # Okamžitě překreslí aplikaci s vyčištěnými hodnotami
 
 with col_odchod:
     if st.button("📤 ODCHOD", use_container_width=True, type="primary"):
         zapis_zaznam("odchod")
+        st.rerun()
 
 # --- EXPORT VÝSLEDKŮ ---
 if st.session_state.scitani_data:
-    st.markdown("---")  # Tato čára zůstává až nad výslednou tabulkou, kde nepřekáží
+    st.markdown("---")
     df = pd.DataFrame(st.session_state.scitani_data)
     st.write(f"Celkem zaznamenáno průchodů: **{len(df)}**")
     st.dataframe(df.tail(3), use_container_width=True)
