@@ -1,10 +1,11 @@
 import streamlit as st
 import datetime
 import pandas as pd
+import json
 
 st.set_page_config(layout="centered")
 
-# --- 1. NAČTENÍ SEZNAMU ---
+# --- 1. NAČTENÍ SEZNAMU SČÍTAČŮ ---
 @st.cache_data(ttl=60)
 def nacti_scitace():
     default_list = ["– (Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
@@ -17,16 +18,43 @@ def nacti_scitace():
 
 seznam_scitacu = nacti_scitace()
 
-# --- INICIALIZACE STAVŮ ---
+# --- 2. LOGIKA PRO LOCAL STORAGE (PAMĚŤ TELEFONU) ---
+# Inicializace dat v paměti Streamlitu, pokud neexistují
 if "scitani_data" not in st.session_state:
     st.session_state.scitani_data = []
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
-# Definice věkových kategorií
-vekove_kategorie = ["– (Nezadáno)", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"]
+# Skrytý JavaScriptový most pro načtení a zápis do paměti prohlížeče
+# Tento kód vytáhne data z mobilu při prvním načtení
+if "prazdny_start" not in st.session_state:
+    st.session_state.prazdny_start = True
+    # JavaScript pro vytažení dat z LocalStorage
+    js_load = """
+    <script>
+    const data = localStorage.getItem('scitani_backup');
+    if (data) {
+        window.parent.postMessage({type: 'streamlit:setComponentValue', value: data}, '*');
+    } else {
+        window.parent.postMessage({type: 'streamlit:setComponentValue', value: '[]'}, '*');
+    }
+    </script>
+    """
+    st.components.v1.html(js_load, height=0, width=0)
 
-# Výchozí hodnoty pro reset
+# Pomocný prvek pro zachycení dat z JavaScriptu
+backup_data = st.session_state.get("backup_bridge")
+if backup_data and st.session_state.prazdny_start:
+    try:
+        loaded_data = json.loads(backup_data)
+        if loaded_data and not st.session_state.scitani_data:
+            st.session_state.scitani_data = loaded_data
+    except Exception:
+        pass
+    st.session_state.prazdny_start = False
+
+
+# Výchozí hodnoty prvků pro čistý start formuláře
 if "mod_dopravy_key" not in st.session_state:
     st.session_state.mod_dopravy_key = "Chodec 🚶"
 if "ve_skupine_key" not in st.session_state:
@@ -46,16 +74,14 @@ if "poznamka_key" not in st.session_state:
 
 # --- ROZHRANÍ APLIKACE ---
 
-# Mód pohybu
 mod_dopravy = st.radio(
     "Mód pohybu", 
-    ["Chodec 🚶", "Běžec 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
+    ["Chodec 🚶", "Běžec <b>🏃</b>", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
     horizontal=True, 
     key="mod_dopravy_key",
     label_visibility="collapsed"
 )
 
-# Skupina
 ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", key="ve_skupine_key")
 
 # Šoupátka (Toggles)
@@ -66,20 +92,18 @@ je_otocka = st.toggle("🔄 Otočka/Návrat?", key="je_otocka_key")
 
 st.write("")
 
-# --- NOVÉ ŘAZENÍ VĚKU: Tlačítka (Pills) vedle sebe na jedno kliknutí ---
-# Vynutíme zobrazení popisku "Věk:" nad tlačítky
+# Věk pomocí pilulkových tlačítek
 st.write("**Věk osoba:**")
 vek = st.pills(
     "Věk",
-    vekove_kategorie,
+    ["– (Nezadáno)", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
     key="vek_key",
     label_visibility="collapsed"
 )
 
-# Poznámka pod věkem
 poznamka = st.text_input("Poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key", label_visibility="collapsed")
 
-# --- VÝBĚR SČÍTAČE (Upravený text) ---
+# Výběr sčítače dole
 st.write("")
 scitac = st.selectbox("Jméno sčítače", seznam_scitacu)
 
@@ -94,9 +118,7 @@ def zpracuj_kliknuti(smer):
     nyni = datetime.datetime.now()
     timestamp_str = nyni.strftime("%Y-%m-%d %H:%M:%S")
 
-    je_skupina = False
-    id_skupiny = None
-
+    # Načtení hodnot z session_state
     v_ve_skupine = st.session_state.ve_skupine_key
     v_mod_dopravy = st.session_state.mod_dopravy_key
     v_vek = st.session_state.vek_key
@@ -105,6 +127,9 @@ def zpracuj_kliknuti(smer):
     v_ma_aktovku = st.session_state.ma_aktovku_key
     v_je_otocka = st.session_state.je_otocka_key
     v_poznamka = st.session_state.poznamka_key
+
+    je_skupina = False
+    id_skupiny = None
 
     if v_ve_skupine:
         je_skupina = True
@@ -140,10 +165,15 @@ def zpracuj_kliknuti(smer):
     
     st.session_state.scitani_data.append(zaznam)
     
-    # --- ZDE BUDE KÓD PRO AUTOMATICKÝ ZÁPIS DO GOOGLE SHEETS ---
-    # (viz návod níže)
+    # ULOŽENÍ DO TELEFONU: Překlopíme data do textu a JavaScriptem je uložíme do paměti mobilu
+    js_save = f"""
+    <script>
+    localStorage.setItem('scitani_backup', JSON.stringify({json.dumps(st.session_state.scitani_data)}));
+    </script>
+    """
+    st.components.v1.html(js_save, height=0, width=0)
     
-    # Automatický reset prvků
+    # Reset prvků
     st.session_state.mod_dopravy_key = "Chodec 🚶"
     st.session_state.ve_skupine_key = False
     st.session_state.ma_psa_key = False
@@ -166,6 +196,17 @@ with col_prichod:
 
 with col_odchod:
     st.button("📤 ODCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("odchod",))
+
+# --- TLAČÍTKO PRO VYMAZÁNÍ PAMĚTI (Když začíná nové sčítání) ---
+def smazat_vsechno():
+    st.session_state.scitani_data = []
+    st.session_state.aktualni_id_skupiny = None
+
+st.write("")
+if st.button("🗑️ Vymazat historii a začít znova", use_container_width=True):
+    smazat_vsechno()
+    st.components.v1.html("<script>localStorage.removeItem('scitani_backup');</script>", height=0, width=0)
+    st.rerun()
 
 # --- EXPORT VÝSLEDKŮ ---
 if st.session_state.scitani_data:
