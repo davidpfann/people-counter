@@ -2,21 +2,27 @@ import datetime
 import pandas as pd
 import streamlit as st
 
+# POZNÁMKA PRO PROPOJENÍ S GOOGLE SHEETS:
+# Pro ostré zálohování stačí odškrtnout (odcommentovat) řádky s st.connection níže.
+try:
+    from streamlit_gsheets import GSheetsConnection
+
+    conn = st.connection("gsheets", type=GSheetsConnection)
+except Exception:
+    conn = None
+
 st.set_page_config(layout="centered")
 
-# Inicializace stavů aplikace
 if "scitani_data" not in st.session_state:
     st.session_state.scitani_data = []
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
 
-# --- LOGIKA ZÁPISU DO SKUPIN (Musí být definována před tlačítky!) ---
 def zapis_zaznam(smer):
     nyni = datetime.datetime.now()
     timestamp_str = nyni.strftime("%Y-%m-%d %H:%M:%S")
 
-    # Pomocná funkce na převod textu na True/False/None
     def preved_stav(hodnota):
         if hodnota == "Ano":
             return True
@@ -24,7 +30,7 @@ def zapis_zaznam(smer):
             return False
         return None
 
-    # Převod módu dopravy na text bez diakritiky pro čisté CSV
+    # Rozšířené mapování módů dopravy na čistý text
     mod_cisty = "Chodec"
     if "Běžec" in mod_dopravy:
         mod_cisty = "Bezec"
@@ -32,8 +38,11 @@ def zapis_zaznam(smer):
         mod_cisty = "Kolo"
     elif "Koloběžka" in mod_dopravy:
         mod_cisty = "Kolobezka"
+    elif "Odrážedlo" in mod_dopravy:
+        mod_cisty = "Odrazedlo"
+    elif "Brusle" in mod_dopravy:
+        mod_cisty = "Brusle"
 
-    # Převod věku na verzi bez diakritiky
     vek_map = {
         "– (Nezadano)": None,
         "Produktivni": "Produktivni",
@@ -83,6 +92,15 @@ def zapis_zaznam(smer):
     }
 
     st.session_state.scitani_data.append(zaznam)
+
+    # AUTOMATICKÁ ZÁLOHA: Pokud je připojení aktivní, odešleme data hned online
+    if conn is not None:
+        try:
+            df_aktualni = pd.DataFrame(st.session_state.scitani_data)
+            conn.update(data=df_aktualni)
+        except Exception:
+            pass  # Pokud selže internet, aplikace pokračuje dál v offline režimu
+
     info_skupina = f" (Skupina: {id_skupiny[-8:]})" if id_skupiny else ""
     st.toast(
         f"Zapsano: {mod_cisty} -> {smer.upper()}{info_skupina}",
@@ -90,28 +108,33 @@ def zapis_zaznam(smer):
     )
 
 
-# --- ROZHRANÍ: TLAČÍTKA SMĚRŮ NAHOŘE ---
+# --- ROZHRANÍ ---
 col_tam, col_zpet = st.columns(2)
-
 with col_tam:
     if st.button("⬅️ TAM", use_container_width=True, type="primary"):
         zapis_zaznam("tam")
-
 with col_zpet:
     if st.button("ZPĚT ➡️", use_container_width=True, type="primary"):
         zapis_zaznam("zpet")
 
 st.markdown("---")
 
-# Volba módu dopravy (opravený label na prázdný řetězec)
+# Rozšířené menu o odrážedlo a brusle
 mod_dopravy = st.radio(
-    "", ["Chodec 🚶", "Běžec 🏃", "Na kole 🚴", "Koloběžka 🛴"], horizontal=True
+    "",
+    [
+        "Chodec 🚶",
+        "Běžec 🏃",
+        "Na kole 🚴",
+        "Koloběžka 🛴",
+        "Odrážedlo 🚲",
+        "Brusle 🛼",
+    ],
+    horizontal=True,
 )
 
-# --- SEKCE PRO SKUPINY ---
 ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", value=False)
 
-# Pomocné třístavové parametry
 c1, c2, c3 = st.columns(3)
 with c1:
     ma_psa = st.segmented_control("Pes? 🐕", ["Ano", "–", "Ne"], default="–")
@@ -122,17 +145,15 @@ with c3:
         "Aktovka? 🎒", ["Ano", "–", "Ne"], default="–"
     )
 
-vek = st.selectbox("Věk", ["– (Nezadano)", "Produktivni", "Dite", "Teenager", "Senior"])
+vek = st.selectbox("Věk", ["– (Nezadano)", "Produktivni", "Drite", "Teenager", "Senior"])
 poznamka = st.text_input("Obecná poznámka")
 
-# --- EXPORT A ZOBRAZENÍ VÝSLEDKŮ ---
 if st.session_state.scitani_data:
     st.markdown("---")
     df = pd.DataFrame(st.session_state.scitani_data)
     st.write(f"Celkem zaznamenáno průchodů: **{len(df)}**")
     st.dataframe(df.tail(5), use_container_width=True)
 
-    # utf-8-sig zajistí správné otevření češtiny (např. z poznámek) v Excelu
     csv = df.to_csv(index=False).encode("utf-8-sig")
     st.download_button(
         "📥 Stáhnout kompletní CSV",
