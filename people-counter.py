@@ -69,7 +69,7 @@ with col_extra1:
 with col_extra2:
     vek = st.selectbox(["Věk?", "Produktivní", "Dítě", "Teenager", "Senior"], key="vek_key")
 
-poznamka = st.text_input("Obecná poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key")
+poznamka = st.text_input(placeholder="Dobrovolná poznámka...", key="poznamka_key")
 
 # --- LOGIKA ZÁPISU ---
 def zapis_zaznam(smer):
