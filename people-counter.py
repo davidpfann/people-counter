@@ -49,7 +49,7 @@ scitac = st.selectbox("Jméno sčítače", seznam_scitacu)
 st.write("")
 
 # Mód pohybu (bez nadpisu, stačí popisek uvnitř)
-mod_dopravy = st.radio("Mód pohybu", ["Chodec 🚶", "Běžec 🏃", "Na kole 🚴", "Koloběžka 🛴"], horizontal=True, key="mod_dopravy_key")
+mod_dopravy = st.radio(["Chodec 🚶", "Běžec 🏃", "Na kole 🚴", "Koloběžka 🛴"], horizontal=True, key="mod_dopravy_key")
 
 # Skupina
 ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", key="ve_skupine_key")
@@ -61,13 +61,13 @@ with c1:
 with c2:
     ma_nakup = st.radio("Nákup? 🛍️", ["–", "Ano", "Ne"], horizontal=True, key="ma_nakup_key")
 with c3:
-    ma_aktovku = st.radio("Aktovka? 🎒", ["–", "Ano", "Ne"], horizontal=True, key="ma_aktovku_key")
+    ma_aktovku = st.radio("Školní aktovka? 🎒", ["–", "Ano", "Ne"], horizontal=True, key="ma_aktovku_key")
 
 col_extra1, col_extra2 = st.columns(2)
 with col_extra1:
-    je_otocka = st.radio("Otočka/Návrat? 🔄", ["–", "Ano", "Ne"], horizontal=True, key="je_otocka_key")
+    je_otocka = st.radio("Otočka/Návrat dříve procházejícího opačným směrem? 🔄", ["–", "Ano", "Ne"], horizontal=True, key="je_otocka_key")
 with col_extra2:
-    vek = st.selectbox("Věk", ["– (Nezadáno)", "Produktivní", "Dítě", "Teenager", "Senior"], key="vek_key")
+    vek = st.selectbox(["Věk?", "Produktivní", "Dítě", "Teenager", "Senior"], key="vek_key")
 
 poznamka = st.text_input("Obecná poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key")
 
