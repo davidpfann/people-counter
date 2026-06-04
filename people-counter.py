@@ -8,7 +8,7 @@ st.set_page_config(layout="centered")
 # --- 1. NAČTENÍ SEZNAMU SČÍTAČŮ ---
 @st.cache_data(ttl=60)
 def nacti_scitace():
-    default_list = ["– (Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
+    default_list = ["(Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
     try:
         with open("scitaci.txt", "r", encoding="utf-8") as f:
             lines = [line.strip() for line in f.readlines() if line.strip()]
@@ -68,7 +68,7 @@ if "ma_aktovku_key" not in st.session_state:
 if "je_otocka_key" not in st.session_state:
     st.session_state.je_otocka_key = False
 if "vek_key" not in st.session_state:
-    st.session_state.vek_key = "– (Nezadáno)"
+    st.session_state.vek_key = "(Nezadáno)"
 if "poznamka_key" not in st.session_state:
     st.session_state.poznamka_key = ""
 
@@ -76,7 +76,7 @@ if "poznamka_key" not in st.session_state:
 
 mod_dopravy = st.radio(
     "Mód pohybu", 
-    ["Chodec 🚶", "Běžec <b>🏃</b>", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
+    ["Chodec 🚶", "Běh 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
     horizontal=True, 
     key="mod_dopravy_key",
     label_visibility="collapsed"
@@ -88,7 +88,7 @@ ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", key="ve_sk
 ma_psa = st.toggle("🐕 Pes?", key="ma_psa_key")
 ma_nakup = st.toggle("🛍️ Nákup?", key="ma_nakup_key")
 ma_aktovku = st.toggle("🎒 Školní aktovka?", key="ma_aktovku_key")
-je_otocka = st.toggle("🔄 Otočka/Návrat?", key="je_otocka_key")
+je_otocka = st.toggle("🔄 Návrat dříve procházející/ho?", key="je_otocka_key")
 
 st.write("")
 
