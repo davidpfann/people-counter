@@ -17,24 +17,29 @@ def nacti_scitace():
 
 seznam_scitacu = nacti_scitace()
 
-# --- INICIALIZACE STAVŮ (A RESET LOGIKY) ---
+# --- INICIALIZACE STAVŮ ---
 if "scitani_data" not in st.session_state:
     st.session_state.scitani_data = []
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
-def reset_formulkare():
-    st.session_state.mod_dopravy_key = "Chodec 🚶"
-    st.session_state.ve_skupine_key = False
-    st.session_state.ma_psa_key = "–"
-    st.session_state.ma_nakup_key = "–"
-    st.session_state.ma_aktovku_key = "–"
-    st.session_state.je_otocka_key = "–"
-    st.session_state.vek_key = "– (Nezadáno)"
-    st.session_state.poznamka_key = ""
-
+# Výchozí hodnoty pro čistý start
 if "mod_dopravy_key" not in st.session_state:
-    reset_formulkare()
+    st.session_state.mod_dopravy_key = "Chodec 🚶"
+if "ve_skupine_key" not in st.session_state:
+    st.session_state.ve_skupine_key = False
+if "ma_psa_key" not in st.session_state:
+    st.session_state.ma_psa_key = "–"
+if "ma_nakup_key" not in st.session_state:
+    st.session_state.ma_nakup_key = "–"
+if "ma_aktovku_key" not in st.session_state:
+    st.session_state.ma_aktovku_key = "–"
+if "je_otocka_key" not in st.session_state:
+    st.session_state.je_otocka_key = "–"
+if "vek_key" not in st.session_state:
+    st.session_state.vek_key = "– (Nezadáno)"
+if "poznamka_key" not in st.session_state:
+    st.session_state.poznamka_key = ""
 
 # --- ROZHRANÍ APLIKACE ---
 
@@ -50,29 +55,25 @@ mod_dopravy = st.radio(
 # Skupina
 ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", key="ve_skupine_key")
 
-# --- PARAMETRY NA JEDEN ŘÁDEK (Čisté řešení bez HTML) ---
-# 1. Pes
+# --- PARAMETRY NA JEDEN ŘÁDEK ---
 r1_col1, r1_col2 = st.columns([1, 2])
 with r1_col1:
     st.write("**Pes? 🐕**")
 with r1_col2:
     ma_psa = st.radio("Pes", ["–", "Ano", "Ne"], horizontal=True, key="ma_psa_key", label_visibility="collapsed")
 
-# 2. Nákup
 r2_col1, r2_col2 = st.columns([1, 2])
 with r2_col1:
     st.write("**Nákup? 🛍️**")
 with r2_col2:
     ma_nakup = st.radio("Nákup", ["–", "Ano", "Ne"], horizontal=True, key="ma_nakup_key", label_visibility="collapsed")
 
-# 3. Aktovka
 r3_col1, r3_col2 = st.columns([1, 2])
 with r3_col1:
     st.write("**Aktovka? 🎒**")
 with r3_col2:
     ma_aktovku = st.radio("Aktovka", ["–", "Ano", "Ne"], horizontal=True, key="ma_aktovku_key", label_visibility="collapsed")
 
-# 4. Otočka
 r4_col1, r4_col2 = st.columns([1, 2])
 with r4_col1:
     st.write("**Otočka? 🔄**")
@@ -91,11 +92,13 @@ with col_p:
 st.write("")
 scitac = st.selectbox("Jméno sčítače", seznam_scitacu)
 
-# --- LOGIKA ZÁPISU ---
-def zapis_zaznam(smer):
+# --- FUNKCE PRO ZÁPIS A RESET (Běží v callbacku) ---
+def zpracuj_kliknuti(smer):
     if scitac == "– (Vyber jméno)":
-        st.error("❌ Před zaznamenáním průchodu musíte dole vybrat své JMÉNO!")
+        st.session_state["chyba_scitace"] = True
         return
+    else:
+        st.session_state["chyba_scitace"] = False
 
     nyni = datetime.datetime.now()
     timestamp_str = nyni.strftime("%Y-%m-%d %H:%M:%S")
@@ -108,7 +111,17 @@ def zapis_zaznam(smer):
     je_skupina = False
     id_skupiny = None
 
-    if ve_skupine:
+    # Načtení aktuálních hodnot přímo z rozhraní (přes klíče)
+    v_ve_skupine = st.session_state.ve_skupine_key
+    v_mod_dopravy = st.session_state.mod_dopravy_key
+    v_vek = st.session_state.vek_key
+    v_ma_psa = st.session_state.ma_psa_key
+    v_ma_nakup = st.session_state.ma_nakup_key
+    v_ma_aktovku = st.session_state.ma_aktovku_key
+    v_je_otocka = st.session_state.je_otocka_key
+    v_poznamka = st.session_state.poznamka_key
+
+    if v_ve_skupine:
         je_skupina = True
         if st.session_state.aktualni_id_skupiny is not None:
             id_skupiny = st.session_state.aktualni_id_skupiny
@@ -129,35 +142,42 @@ def zapis_zaznam(smer):
         "Timestamp": timestamp_str,
         "Scitac": scitac,
         "Smer": smer,
-        "Mod_pohybu": mod_dopravy,
-        "Vek": vek if vek != "– (Nezadáno)" else None,
-        "Pes": preved_stav(ma_psa),
-        "Nakup": preved_stav(ma_nakup),
-        "Aktovka": preved_stav(ma_aktovku),
-        "Otocka": preved_stav(je_otocka),
+        "Mod_pohybu": v_mod_dopravy,
+        "Vek": v_vek if v_vek != "– (Nezadáno)" else None,
+        "Pes": preved_stav(v_ma_psa),
+        "Nakup": preved_stav(v_ma_nakup),
+        "Aktovka": preved_stav(v_ma_aktovku),
+        "Otocka": preved_stav(v_je_otocka),
         "Je_skupina": je_skupina,
         "ID_skupiny": id_skupiny,
-        "Poznamka": poznamka if poznamka else None
+        "Poznamka": v_poznamka if v_poznamka else None
     }
     
     st.session_state.scitani_data.append(zaznam)
-    st.toast(f"Zapsán {smer.upper()}: {mod_dopravy}", icon="✅")
     
-    reset_formulkare()
+    # Bezpečný bezchybný reset prvků vyčištěním session_state klíčů
+    st.session_state.mod_dopravy_key = "Chodec 🚶"
+    st.session_state.ve_skupine_key = False
+    st.session_state.ma_psa_key = "–"
+    st.session_state.ma_nakup_key = "–"
+    st.session_state.ma_aktovku_key = "–"
+    st.session_state.je_otocka_key = "–"
+    st.session_state.vek_key = "– (Nezadáno)"
+    st.session_state.poznamka_key = ""
+
+# Zobrazení případné chyby výběru sčítače
+if st.session_state.get("chyba_scitace", False):
+    st.error("❌ Před zaznamenáním průchodu musíte dole vybrat své JMÉNO!")
 
 # --- AKČNÍ TLAČÍTKA ---
 st.write("") 
 col_prichod, col_odchod = st.columns(2)
 
 with col_prichod:
-    if st.button("📥 PŘÍCHOD", use_container_width=True, type="primary"):
-        zapis_zaznam("prichod")
-        st.rerun()
+    st.button("📥 PŘÍCHOD", use_container_width=True, type="primary", on_click=zproced_kliknuti, args=("prichod",))
 
 with col_odchod:
-    if st.button("📤 ODCHOD", use_container_width=True, type="primary"):
-        zapis_zaznam("odchod")
-        st.rerun()
+    st.button("📤 ODCHOD", use_container_width=True, type="primary", on_click=zproced_kliknuti, args=("odchod",))
 
 # --- EXPORT VÝSLEDKŮ ---
 if st.session_state.scitani_data:
