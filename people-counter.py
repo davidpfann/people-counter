@@ -55,30 +55,39 @@ mod_dopravy = st.radio(
 # Skupina
 ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", key="ve_skupine_key")
 
-# --- PARAMETRY NA JEDEN ŘÁDEK ---
-r1_col1, r1_col2 = st.columns([1, 2])
-with r1_col1:
-    st.write("**Pes? 🐕**")
-with r1_col2:
-    ma_psa = st.radio("Pes", ["–", "Ano", "Ne"], horizontal=True, key="ma_psa_key", label_visibility="collapsed")
+# --- PARAMETRY NA JEDEN ŘÁDEK (Fixní rozvržení pro mobily) ---
+# Používáme flexibilní CSS grid, který se na mobilu nikdy nerozpadne na dva řádky
+st.markdown("""
+<style>
+.row-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: -10px;
+}
+.label-text {
+    font-weight: bold;
+    font-size: 16px;
+    white-space: nowrap;
+}
+</style>
+""", unsafe_html=True)
 
-r2_col1, r2_col2 = st.columns([1, 2])
-with r2_col1:
-    st.write("**Nákup? 🛍️**")
-with r2_col2:
-    ma_nakup = st.radio("Nákup", ["–", "Ano", "Ne"], horizontal=True, key="ma_nakup_key", label_visibility="collapsed")
+# 1. Pes
+st.markdown("<div class='row-container'><div class='label-text'>Pes? 🐕</div></div>", unsafe_html=True)
+ma_psa = st.radio("Pes", ["–", "Ano", "Ne"], horizontal=True, key="ma_psa_key", label_visibility="collapsed")
 
-r3_col1, r3_col2 = st.columns([1, 2])
-with r3_col1:
-    st.write("**Aktovka? 🎒**")
-with r3_col2:
-    ma_aktovku = st.radio("Aktovka", ["–", "Ano", "Ne"], horizontal=True, key="ma_aktovku_key", label_visibility="collapsed")
+# 2. Nákup
+st.markdown("<div class='row-container'><div class='label-text'>Nákup? 🛍️</div></div>", unsafe_html=True)
+ma_nakup = st.radio("Nákup", ["–", "Ano", "Ne"], horizontal=True, key="ma_nakup_key", label_visibility="collapsed")
 
-r4_col1, r4_col2 = st.columns([1, 2])
-with r4_col1:
-    st.write("**Otočka? 🔄**")
-with r4_col2:
-    je_otocka = st.radio("Otočka", ["–", "Ano", "Ne"], horizontal=True, key="je_otocka_key", label_visibility="collapsed")
+# 3. Aktovka
+st.markdown("<div class='row-container'><div class='label-text'>Aktovka? 🎒</div></div>", unsafe_html=True)
+ma_aktovku = st.radio("Aktovka", ["–", "Ano", "Ne"], horizontal=True, key="ma_aktovku_key", label_visibility="collapsed")
+
+# 4. Otočka
+st.markdown("<div class='row-container'><div class='label-text'>Otočka? 🔄</div></div>", unsafe_html=True)
+je_otocka = st.radio("Otočka", ["–", "Ano", "Ne"], horizontal=True, key="je_otocka_key", label_visibility="collapsed")
 
 # Věk a Poznámka vedle sebe
 st.write("")
@@ -92,7 +101,7 @@ with col_p:
 st.write("")
 scitac = st.selectbox("Jméno sčítače", seznam_scitacu)
 
-# --- FUNKCE PRO ZÁPIS A RESET (Běží v callbacku) ---
+# --- FUNKCE PRO ZÁPIS A RESET (Opravený název) ---
 def zpracuj_kliknuti(smer):
     if scitac == "– (Vyber jméno)":
         st.session_state["chyba_scitace"] = True
@@ -111,7 +120,6 @@ def zpracuj_kliknuti(smer):
     je_skupina = False
     id_skupiny = None
 
-    # Načtení aktuálních hodnot přímo z rozhraní (přes klíče)
     v_ve_skupine = st.session_state.ve_skupine_key
     v_mod_dopravy = st.session_state.mod_dopravy_key
     v_vek = st.session_state.vek_key
@@ -128,63 +136,3 @@ def zpracuj_kliknuti(smer):
         else:
             if st.session_state.scitani_data:
                 posledni_index = len(st.session_state.scitani_data) - 1
-                id_skupiny = st.session_state.scitani_data[posledni_index]["Timestamp"].replace(" ", "_")
-                st.session_state.scitani_data[posledni_index]["Je_skupina"] = True
-                st.session_state.scitani_data[posledni_index]["ID_skupiny"] = id_skupiny
-                st.session_state.aktualni_id_skupiny = id_skupiny
-            else:
-                id_skupiny = timestamp_str.replace(" ", "_")
-                st.session_state.aktualni_id_skupiny = id_skupiny
-    else:
-        st.session_state.aktualni_id_skupiny = None
-
-    zaznam = {
-        "Timestamp": timestamp_str,
-        "Scitac": scitac,
-        "Smer": smer,
-        "Mod_pohybu": v_mod_dopravy,
-        "Vek": v_vek if v_vek != "– (Nezadáno)" else None,
-        "Pes": preved_stav(v_ma_psa),
-        "Nakup": preved_stav(v_ma_nakup),
-        "Aktovka": preved_stav(v_ma_aktovku),
-        "Otocka": preved_stav(v_je_otocka),
-        "Je_skupina": je_skupina,
-        "ID_skupiny": id_skupiny,
-        "Poznamka": v_poznamka if v_poznamka else None
-    }
-    
-    st.session_state.scitani_data.append(zaznam)
-    
-    # Bezpečný bezchybný reset prvků vyčištěním session_state klíčů
-    st.session_state.mod_dopravy_key = "Chodec 🚶"
-    st.session_state.ve_skupine_key = False
-    st.session_state.ma_psa_key = "–"
-    st.session_state.ma_nakup_key = "–"
-    st.session_state.ma_aktovku_key = "–"
-    st.session_state.je_otocka_key = "–"
-    st.session_state.vek_key = "– (Nezadáno)"
-    st.session_state.poznamka_key = ""
-
-# Zobrazení případné chyby výběru sčítače
-if st.session_state.get("chyba_scitace", False):
-    st.error("❌ Před zaznamenáním průchodu musíte dole vybrat své JMÉNO!")
-
-# --- AKČNÍ TLAČÍTKA ---
-st.write("") 
-col_prichod, col_odchod = st.columns(2)
-
-with col_prichod:
-    st.button("📥 PŘÍCHOD", use_container_width=True, type="primary", on_click=zproced_kliknuti, args=("prichod",))
-
-with col_odchod:
-    st.button("📤 ODCHOD", use_container_width=True, type="primary", on_click=zproced_kliknuti, args=("odchod",))
-
-# --- EXPORT VÝSLEDKŮ ---
-if st.session_state.scitani_data:
-    st.markdown("---")
-    df = pd.DataFrame(st.session_state.scitani_data)
-    st.write(f"Celkem zaznamenáno průchodů: **{len(df)}**")
-    st.dataframe(df.tail(3), use_container_width=True)
-    
-    csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Stáhnout kompletní CSV", csv, "scitani_chodcu.csv", "text/csv", use_container_width=True)
