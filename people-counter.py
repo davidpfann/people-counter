@@ -7,7 +7,7 @@ st.set_page_config(layout="centered")
 # --- 1. NAČTENÍ SEZNAMU ---
 @st.cache_data(ttl=60)
 def nacti_scitace():
-    default_list = ["– (Vyber jméno)", "Sčítač 1", "Sčítač 2"]
+    default_list = ["– (Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
     try:
         with open("scitaci.txt", "r", encoding="utf-8") as f:
             lines = [line.strip() for line in f.readlines() if line.strip()]
@@ -23,7 +23,10 @@ if "scitani_data" not in st.session_state:
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
-# Výchozí hodnoty pro reset (Toggley začínají jako False)
+# Definice věkových kategorií
+vekove_kategorie = ["– (Nezadáno)", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"]
+
+# Výchozí hodnoty pro reset
 if "mod_dopravy_key" not in st.session_state:
     st.session_state.mod_dopravy_key = "Chodec 🚶"
 if "ve_skupine_key" not in st.session_state:
@@ -55,27 +58,34 @@ mod_dopravy = st.radio(
 # Skupina
 ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", key="ve_skupine_key")
 
-# --- JEDNOŘÁDKOVÉ PARAMETRY POMOCÍ NATÍVNÍCH TOGGLES ---
+# Šoupátka (Toggles)
 ma_psa = st.toggle("🐕 Pes?", key="ma_psa_key")
 ma_nakup = st.toggle("🛍️ Nákup?", key="ma_nakup_key")
 ma_aktovku = st.toggle("🎒 Školní aktovka?", key="ma_aktovku_key")
 je_otocka = st.toggle("🔄 Otočka/Návrat?", key="je_otocka_key")
 
-# Věk a Poznámka vedle sebe
 st.write("")
-col_v, col_p = st.columns(2)
-with col_v:
-    vek = st.selectbox("Věk", ["– (Nezadáno)", "Produktivní", "Dítě", "Teenager", "Senior"], key="vek_key", label_visibility="collapsed")
-with col_p:
-    poznamka = st.text_input("Poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key", label_visibility="collapsed")
 
-# --- VÝBĚR SČÍTAČE ---
+# --- NOVÉ ŘAZENÍ VĚKU: Tlačítka (Pills) vedle sebe na jedno kliknutí ---
+# Vynutíme zobrazení popisku "Věk:" nad tlačítky
+st.write("**Věk osoba:**")
+vek = st.pills(
+    "Věk",
+    vekove_kategorie,
+    key="vek_key",
+    label_visibility="collapsed"
+)
+
+# Poznámka pod věkem
+poznamka = st.text_input("Poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key", label_visibility="collapsed")
+
+# --- VÝBĚR SČÍTAČE (Upravený text) ---
 st.write("")
 scitac = st.selectbox("Jméno sčítače", seznam_scitacu)
 
 # --- FUNKCE PRO ZÁPIS A RESET ---
 def zpracuj_kliknuti(smer):
-    if scitac == "– (Vyber jméno)":
+    if scitac == "– (Vyber jméno sčítače)":
         st.session_state["chyba_scitace"] = True
         return
     else:
@@ -87,7 +97,6 @@ def zpracuj_kliknuti(smer):
     je_skupina = False
     id_skupiny = None
 
-    # Načtení hodnot z session_state přes klíče
     v_ve_skupine = st.session_state.ve_skupine_key
     v_mod_dopravy = st.session_state.mod_dopravy_key
     v_vek = st.session_state.vek_key
@@ -114,7 +123,6 @@ def zpracuj_kliknuti(smer):
     else:
         st.session_state.aktualni_id_skupiny = None
 
-    # Pokud je zapnutý toggle, zapíše se True. Pokud je vypnutý, zapíše se None (Nezadáno/Prázdné políčko)
     zaznam = {
         "Timestamp": timestamp_str,
         "Scitac": scitac,
@@ -132,7 +140,10 @@ def zpracuj_kliknuti(smer):
     
     st.session_state.scitani_data.append(zaznam)
     
-    # Automatický reset po uložení
+    # --- ZDE BUDE KÓD PRO AUTOMATICKÝ ZÁPIS DO GOOGLE SHEETS ---
+    # (viz návod níže)
+    
+    # Automatický reset prvků
     st.session_state.mod_dopravy_key = "Chodec 🚶"
     st.session_state.ve_skupine_key = False
     st.session_state.ma_psa_key = False
