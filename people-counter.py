@@ -39,13 +39,13 @@ if "mod_dopravy_key" not in st.session_state:
 # --- ROZHRANÍ APLIKACE (MAXIMÁLNĚ KOMPAKTNÍ) ---
 
 # 1. Výběr sčítače
-scitac = st.selectbox("Jméno sčítače", seznam_scitacu)
+scitac = st.selectbox("0", seznam_scitacu)
 st.write("")
 
 # Mód pohybu - popisek je skrytý, nezabírá místo
 mod_dopravy = st.radio(
     "Mód pohybu", 
-    ["Chodec 🚶", "Běžec 🏃", "Na kole 🚴", "Koloběžka 🛴"], 
+    ["Chodec 🚶", "Běžec 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
     horizontal=True, 
     key="mod_dopravy_key",
     label_visibility="collapsed"
