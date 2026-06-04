@@ -8,7 +8,7 @@ st.set_page_config(layout="centered")
 # --- 1. NAČTENÍ SEZNAMU SČÍTAČŮ ---
 @st.cache_data(ttl=60)
 def nacti_scitace():
-    default_list = ["(Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
+    default_list = ["– (Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
     try:
         with open("scitaci.txt", "r", encoding="utf-8") as f:
             lines = [line.strip() for line in f.readlines() if line.strip()]
@@ -19,17 +19,14 @@ def nacti_scitace():
 seznam_scitacu = nacti_scitace()
 
 # --- 2. LOGIKA PRO LOCAL STORAGE (PAMĚŤ TELEFONU) ---
-# Inicializace dat v paměti Streamlitu, pokud neexistují
 if "scitani_data" not in st.session_state:
     st.session_state.scitani_data = []
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
-# Skrytý JavaScriptový most pro načtení a zápis do paměti prohlížeče
-# Tento kód vytáhne data z mobilu při prvním načtení
+# Načtení z paměti prohlížeče při startu
 if "prazdny_start" not in st.session_state:
     st.session_state.prazdny_start = True
-    # JavaScript pro vytažení dat z LocalStorage
     js_load = """
     <script>
     const data = localStorage.getItem('scitani_backup');
@@ -42,7 +39,6 @@ if "prazdny_start" not in st.session_state:
     """
     st.components.v1.html(js_load, height=0, width=0)
 
-# Pomocný prvek pro zachycení dat z JavaScriptu
 backup_data = st.session_state.get("backup_bridge")
 if backup_data and st.session_state.prazdny_start:
     try:
@@ -53,8 +49,7 @@ if backup_data and st.session_state.prazdny_start:
         pass
     st.session_state.prazdny_start = False
 
-
-# Výchozí hodnoty prvků pro čistý start formuláře
+# Výchozí hodnoty pro reset formuláře
 if "mod_dopravy_key" not in st.session_state:
     st.session_state.mod_dopravy_key = "Chodec 🚶"
 if "ve_skupine_key" not in st.session_state:
@@ -68,48 +63,49 @@ if "ma_aktovku_key" not in st.session_state:
 if "je_otocka_key" not in st.session_state:
     st.session_state.je_otocka_key = False
 if "vek_key" not in st.session_state:
-    st.session_state.vek_key = "(Nezadán)"
+    st.session_state.vek_key = "Nezadán"
 if "poznamka_key" not in st.session_state:
     st.session_state.poznamka_key = ""
 
 # --- ROZHRANÍ APLIKACE ---
 
+# Mód pohybu
 mod_dopravy = st.radio(
     "Mód pohybu", 
-    ["Chodec 🚶", "Běh 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
+    ["Chodec 🚶", "Běžec 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
     horizontal=True, 
     key="mod_dopravy_key",
     label_visibility="collapsed"
 )
 
+# Skupina
 ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", key="ve_skupine_key")
 
 # Šoupátka (Toggles)
 ma_psa = st.toggle("🐕 Pes?", key="ma_psa_key")
 ma_nakup = st.toggle("🛍️ Nákup?", key="ma_nakup_key")
 ma_aktovku = st.toggle("🎒 Školní aktovka?", key="ma_aktovku_key")
-je_otocka = st.toggle("🔄 Návrat dříve procházející/ho?", key="je_otocka_key")
+je_otocka = st.toggle("🔄 Otočka/Návrat?", key="je_otocka_key")
 
-st.write("")
-
-# Věk pomocí pilulkových tlačítek
+# Věk pomocí pilulkových tlačítek (Na první pozici změněno na "Nezadán")
 st.write("**Věk osoba:**")
 vek = st.pills(
     "Věk",
-    ["(Nezadán)", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
+    ["Nezadán", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
     key="vek_key",
     label_visibility="collapsed"
 )
 
-poznamka = st.text_input("Poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key", label_visibility="collapsed")
-
-# Výběr sčítače dole
-st.write("")
-scitac = st.selectbox("", seznam_scitacu)
+# Poznámka a Sčítač vedle sebe na jednom řádku (Těsně nad tlačítky, bez textových nadpisů)
+col_pozn, col_scit = st.columns(2)
+with col_pozn:
+    poznamka = st.text_input("Poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key", label_visibility="collapsed")
+with col_scit:
+    scitac = st.selectbox("Jméno sčítače", seznam_scitacu, label_visibility="collapsed")
 
 # --- FUNKCE PRO ZÁPIS A RESET ---
 def zpracuj_kliknuti(smer):
-    if scitac == "(Vyber jméno sčítače)":
+    if scitac == "– (Vyber jméno sčítače)":
         st.session_state["chyba_scitace"] = True
         return
     else:
@@ -118,7 +114,7 @@ def zpracuj_kliknuti(smer):
     nyni = datetime.datetime.now()
     timestamp_str = nyni.strftime("%Y-%m-%d %H:%M:%S")
 
-    # Načtení hodnot z session_state
+    # Načtení hodnot ze session_state
     v_ve_skupine = st.session_state.ve_skupine_key
     v_mod_dopravy = st.session_state.mod_dopravy_key
     v_vek = st.session_state.vek_key
@@ -153,7 +149,7 @@ def zpracuj_kliknuti(smer):
         "Scitac": scitac,
         "Smer": smer,
         "Mod_pohybu": v_mod_dopravy,
-        "Vek": v_vek if v_vek != "(Nezadán)" else None,
+        "Vek": v_vek if v_vek != "Nezadán" else None,
         "Pes": True if v_ma_psa else None,
         "Nakup": True if v_ma_nakup else None,
         "Aktovka": True if v_ma_aktovku else None,
@@ -165,7 +161,7 @@ def zpracuj_kliknuti(smer):
     
     st.session_state.scitani_data.append(zaznam)
     
-    # ULOŽENÍ DO TELEFONU: Překlopíme data do textu a JavaScriptem je uložíme do paměti mobilu
+    # Zápis do LocalStorage mobilu
     js_save = f"""
     <script>
     localStorage.setItem('scitani_backup', JSON.stringify({json.dumps(st.session_state.scitani_data)}));
@@ -180,24 +176,23 @@ def zpracuj_kliknuti(smer):
     st.session_state.ma_nakup_key = False
     st.session_state.ma_aktovku_key = False
     st.session_state.je_otocka_key = False
-    st.session_state.vek_key = "(Nezadán)"
+    st.session_state.vek_key = "Nezadán"
     st.session_state.poznamka_key = ""
 
 # Zobrazení chybové hlášky
 if st.session_state.get("chyba_scitace", False):
-    st.error("❌ Před zaznamenáním průchodu musíte dole vybrat své JMÉNO!")
+    st.error("❌ Před zaznamenáním průchodu musíte vybrat své JMÉNO SČÍTAČE!")
 
-# --- AKČNÍ TLAČÍTKA ---
-st.write("") 
+# --- AKČNÍ TLAČÍTKA (S přidanými barevnými ikonami šipek) ---
 col_prichod, col_odchod = st.columns(2)
 
 with col_prichod:
-    st.button("📥 PŘÍCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("prichod",))
+    st.button("🟢 📥 PŘÍCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("prichod",))
 
 with col_odchod:
-    st.button("📤 ODCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("odchod",))
+    st.button("📤 🔴 ODCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("odchod",))
 
-# --- TLAČÍTKO PRO VYMAZÁNÍ PAMĚTI (Když začíná nové sčítání) ---
+# --- TLAČÍTKO PRO VYMAZÁNÍ PAMĚTI ---
 def smazat_vsechno():
     st.session_state.scitani_data = []
     st.session_state.aktualni_id_skupiny = None
