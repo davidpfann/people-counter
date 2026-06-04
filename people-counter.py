@@ -3,7 +3,6 @@ import datetime
 import pandas as pd
 
 st.set_page_config(layout="centered")
-st.title("Sčítání chodců: Modul pro analýzu skupin")
 
 # Inicializace stavů aplikace
 if "scitani_data" not in st.session_state:
@@ -11,12 +10,21 @@ if "scitani_data" not in st.session_state:
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
-st.subheader("Parametry chodce")
+# --- TLAČÍTKA SMĚRŮ ---
+st.markdown("---")
+col_tam, col_zpet = st.columns(2)
 
-mod_dopravy = st.radio("Mód pohybu", ["Chodec 🚶", "Běžec 🏃", "Na kole 🚴", "Koloběžka 🛴"], horizontal=True)
+with col_tam:
+    if st.button("⬅️ TAM", use_container_width=True, type="primary"):
+        zapis_zaznam("tam")
+
+with col_zpet:
+    if st.button("ZPĚT ➡️", use_container_width=True, type="primary"):
+        zapis_zaznam("zpet")
+
+mod_dopravy = st.radio(["Chodec 🚶", "Běžec 🏃", "Na kole 🚴", "Koloběžka 🛴"], horizontal=True)
 
 # --- NOVÁ SEKCE PRO SKUPINY ---
-st.subheader("Sociální vazba")
 col_skupina = st.columns(1)[0]
 with col_skupina:
     # Klíčový tag pro sčítače
@@ -91,18 +99,6 @@ def zapis_zaznam(smer):
     # Malé vizuální potvrzení na displeji
     info_skupina = f" (Skupina: {id_skupiny[-8:]})" if id_skupiny else ""
     st.toast(f"Zapsáno: {mod_dopravy} -> {smer.upper()}{info_skupina}", icon="👥" if je_skupina else "📝")
-
-# --- TLAČÍTKA SMĚRŮ ---
-st.markdown("---")
-col_tam, col_zpet = st.columns(2)
-
-with col_tam:
-    if st.button("⬅️ TAM", use_container_width=True, type="primary"):
-        zapis_zaznam("tam")
-
-with col_zpet:
-    if st.button("ZPĚT ➡️", use_container_width=True, type="primary"):
-        zapis_zaznam("zpet")
 
 # --- EXPORT A ZOBRAZENÍ VÝSLEDKŮ ---
 if st.session_state.scitani_data:
