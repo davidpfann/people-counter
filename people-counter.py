@@ -68,7 +68,7 @@ if "ma_aktovku_key" not in st.session_state:
 if "je_otocka_key" not in st.session_state:
     st.session_state.je_otocka_key = False
 if "vek_key" not in st.session_state:
-    st.session_state.vek_key = "(Nezadáno)"
+    st.session_state.vek_key = "(Nezadán)"
 if "poznamka_key" not in st.session_state:
     st.session_state.poznamka_key = ""
 
@@ -96,7 +96,7 @@ st.write("")
 st.write("**Věk osoba:**")
 vek = st.pills(
     "Věk",
-    ["– (Nezadáno)", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
+    ["(Nezadán)", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
     key="vek_key",
     label_visibility="collapsed"
 )
@@ -105,11 +105,11 @@ poznamka = st.text_input("Poznámka", placeholder="Dobrovolná poznámka...", ke
 
 # Výběr sčítače dole
 st.write("")
-scitac = st.selectbox("Jméno sčítače", seznam_scitacu)
+scitac = st.selectbox("", seznam_scitacu)
 
 # --- FUNKCE PRO ZÁPIS A RESET ---
 def zpracuj_kliknuti(smer):
-    if scitac == "– (Vyber jméno sčítače)":
+    if scitac == "(Vyber jméno sčítače)":
         st.session_state["chyba_scitace"] = True
         return
     else:
@@ -153,7 +153,7 @@ def zpracuj_kliknuti(smer):
         "Scitac": scitac,
         "Smer": smer,
         "Mod_pohybu": v_mod_dopravy,
-        "Vek": v_vek if v_vek != "– (Nezadáno)" else None,
+        "Vek": v_vek if v_vek != "(Nezadán)" else None,
         "Pes": True if v_ma_psa else None,
         "Nakup": True if v_ma_nakup else None,
         "Aktovka": True if v_ma_aktovku else None,
@@ -180,7 +180,7 @@ def zpracuj_kliknuti(smer):
     st.session_state.ma_nakup_key = False
     st.session_state.ma_aktovku_key = False
     st.session_state.je_otocka_key = False
-    st.session_state.vek_key = "– (Nezadáno)"
+    st.session_state.vek_key = "(Nezadán)"
     st.session_state.poznamka_key = ""
 
 # Zobrazení chybové hlášky
