@@ -69,30 +69,26 @@ def nacti_scitace():
 
 seznam_scitacu = nacti_scitace()
 
-# --- 2. DEFINITIVNÍ OPRAVA PRO LOCAL STORAGE ---
+# --- 2. LOGIKA PRO LOCAL STORAGE ---
 if "scitani_data" not in st.session_state:
     st.session_state.scitani_data = []
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
-# Vytvoření speciálního skrytého textového pole, do kterého JavaScript z telefonu vpíše data navrácená z paměti
-# Streamlit toto pole dokáže nativně přečíst hned při startu
 if "js_executed" not in st.session_state:
     st.session_state.js_executed = False
 
-# JavaScript, který vytáhne data z paměti telefonu a vloží je do skrytého text inputu
+# JavaScript, který bezpečně najde skryté textové pole a předá mu cache z telefonu
 js_load_script = """
 <script>
     setTimeout(function() {
         const data = localStorage.getItem('scitani_backup');
         if (data) {
-            // Najdeme skryté textové pole a vlepíme do něj JSON z paměti telefonu
             const inputs = window.parent.document.querySelectorAll('input[type="text"]');
             for (let input of inputs) {
                 if (input.placeholder === "storage_bridge_placeholder") {
                     if (input.value !== data) {
                         input.value = data;
-                        // Vyvoláme změnu, aby si toho Streamlit všiml
                         input.dispatchEvent(new Event('input', { bubbles: true }));
                         input.dispatchEvent(new Event('change', { bubbles: true }));
                     }
@@ -103,8 +99,9 @@ js_load_script = """
 </script>
 """
 
-# Vykreslíme neviditelný most
-st.markdown(f"<div style='display:none;'>{js_load_script}</div>", unsafe_html=True)
+# OPRAVENO: Používáme st.components.v1.html namísto st.markdown s unsafe_html
+st.components.v1.html(js_load_script, height=0, width=0)
+
 storage_bridge = st.text_input(
     "bridge", 
     placeholder="storage_bridge_placeholder", 
@@ -118,11 +115,10 @@ if storage_bridge and not st.session_state.scitani_data and not st.session_state
         if isinstance(loaded_list, list) and len(loaded_list) > 0:
             st.session_state.scitani_data = loaded_list
             st.session_state.js_executed = True
-            st.rerun() # Jeden rychlý refresh, ať se data okamžitě vykreslí v tabulce
+            st.rerun()
     except Exception:
         pass
 
-# Pokud se vymaže paměť tlačítkem dole, musíme povolit opětovné načtení příště
 if not st.session_state.scitani_data and st.session_state.js_executed:
     st.session_state.js_executed = False
 
