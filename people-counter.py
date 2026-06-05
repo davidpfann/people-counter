@@ -5,7 +5,7 @@ import json
 
 st.set_page_config(layout="centered")
 
-# --- Globální CSS injekce pro fixní jednořádkový design sloupců + zelené tlačítko ---
+# --- Globální CSS injekce for fixní jednořádkový design, spodní toast a zelené tlačítko ---
 st.html("""
 <style>
     /* Vynutíme, aby columns držely vedle sebe i na sebemenším mobilu a nezalamovaly se pod sebe */
@@ -28,6 +28,19 @@ st.html("""
     [data-testid="stHorizontalBlock"] > div:nth-child(2) {
         flex-grow: 0 !important;
         min-width: max-content !important;
+    }
+
+    /* POSUNUTÍ A ZMENŠENÍ TOASTU: Přesuneme ho dolů, aby nezavázel nahoře u módů dopravy */
+    [data-testid="stToastContainer"] {
+        top: auto !important;
+        bottom: 20px !important;
+        right: 20px !important;
+        left: auto !important;
+    }
+    [data-testid="stToast"] {
+        padding: 8px 12px !important;
+        min-width: auto !important;
+        max-width: 280px !important;
     }
 
     /* Stylování akčních tlačítek (Příchod = Zelená, Odchod = Červená) */
@@ -56,35 +69,44 @@ def nacti_scitace():
 
 seznam_scitacu = nacti_scitace()
 
-# --- 2. LOGIKA PRO LOCAL STORAGE (PAMĚŤ TELEFONU) ---
+# --- 2. ROBUSTNÍ LOGIKA PRO LOCAL STORAGE (OBNOVENÍ HISTORIE PO REFRESHU) ---
 if "scitani_data" not in st.session_state:
     st.session_state.scitani_data = []
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
+# Skrytý obousměrný most mezi JavaScriptem v mobilu a Pythonem na serveru
 if "prazdny_start" not in st.session_state:
     st.session_state.prazdny_start = True
-    js_load = """
-    <script>
-    const data = localStorage.getItem('scitani_backup');
-    if (data) {
-        window.parent.postMessage({type: 'streamlit:setComponentValue', value: data}, '*');
-    } else {
-        window.parent.postMessage({type: 'streamlit:setComponentValue', value: '[]'}, '*');
-    }
-    </script>
-    """
-    st.components.v1.html(js_load, height=0, width=0)
 
-backup_data = st.session_state.get("backup_bridge")
-if backup_data and st.session_state.prazdny_start:
+# Tento HTML/JS prvek slouží jako aktivní přijímač zpráv z LocalStorage
+receiver_html = """
+<script>
+    const data = localStorage.getItem('scitani_backup');
+    // Pošleme data zpět do Streamlitu přes standardní rozhraní
+    window.parent.postMessage({
+        type: 'streamlit:setComponentValue',
+        value: data ? data : '[]'
+    }, '*');
+</script>
+"""
+# Spustíme přijímač a uložíme výstup do st.session_state pod klíčem "backup_bridge"
+ctx = st.html(f"<div style='display:none;'>{receiver_html}</div>")
+
+# Pokud se stránka načetla poprvé a přijímač chytil data z mobilu, naplníme historii
+if st.session_state.prazdny_start:
+    # Přístup k datům z naposledy vykonaného skriptu
     try:
-        loaded_data = json.loads(backup_data)
-        if loaded_data and not st.session_state.scitani_data:
-            st.session_state.scitani_data = loaded_data
+        # Hledáme, jestli nám prohlížeč poslal uloženou cache
+        js_data = st.session_state.get("backup_bridge")
+        if js_data:
+            loaded_data = json.loads(js_data)
+            if loaded_data and not st.session_state.scitani_data:
+                st.session_state.scitani_data = loaded_data
+                st.session_state.prazdny_start = False
+                st.rerun() # Rychlý restart, ať tabulka hned naskočí vykreslená
     except Exception:
         pass
-    st.session_state.prazdny_start = False
 
 # Výchozí hodnoty pro reset formuláře
 if "mod_dopravy_key" not in st.session_state:
@@ -106,7 +128,7 @@ if "poznamka_key" not in st.session_state:
 
 # --- ROZHRANÍ APLIKACE ---
 
-# Mód pohybu (Tvoje integrovaná verze s bruslemi)
+# Mód pohybu
 mod_dopravy = st.segmented_control(
     "Mód pohybu",
     ["Chodec 🚶", "Běh🏃", " 🚴 ", " 🛴 ", " 🛼 ", "Jiné"],
@@ -114,8 +136,7 @@ mod_dopravy = st.segmented_control(
     label_visibility="collapsed"
 )
 
-# --- PARAMETRY (Sloupce s vynuceným no-wrapem přes CSS) ---
-
+# --- PARAMETRY ---
 # 1. Řádek: Pes
 c1, c2 = st.columns([1, 1])
 with c1:
@@ -144,7 +165,7 @@ with c1:
 with c2:
     je_otocka = st.segmented_control("Otočka", ["–", "Ano", "Ne"], key="je_otocka_key", label_visibility="collapsed")
 
-# Věk pomocí segmentových tlačítek (Tvoje integrovaná verze s rozsahy)
+# Věk pomocí segmentových tlačítek
 vek = st.segmented_control(
     "Věk",
     ["Věk nezadán", "3+", "6+", "12+", "18+", "30+", "60+", "75+"],
@@ -152,10 +173,10 @@ vek = st.segmented_control(
     label_visibility="collapsed"
 )
 
-# Skupina přesunutá dolů nad akční tlačítka (Tvoje integrovaná verze textu)
+# Skupina přesunutá dolů nad akční tlačítka
 ve_skupine = st.checkbox("👥 Šli ve skupině s předchozím zadaným", key="ve_skupine_key")
 
-# Poznámka a Sčítač (Tvoje integrované prohození sloupců)
+# Poznámka a Sčítač
 col_scit, col_pozn = st.columns(2)
 with col_scit:
     scitac = st.selectbox("Jméno sčítače", seznam_scitacu, key="vyber_scitace_widget", label_visibility="collapsed")
@@ -224,6 +245,7 @@ def zpracuj_kliknuti(smer):
     
     st.session_state.scitani_data.append(zaznam)
     
+    # Okamžitý zápis do skryté paměti mobilu
     js_save = f"""
     <script>
     localStorage.setItem('scitani_backup', JSON.stringify({json.dumps(st.session_state.scitani_data)}));
@@ -245,11 +267,10 @@ def zpracuj_kliknuti(smer):
     st.session_state.vek_key = "Věk nezadán"
     st.session_state.poznamka_key = ""
 
-# Zobrazení chybové hlášky, pokud není vybráno jméno
 if st.session_state.get("chyba_scitace", False):
     st.error("❌ Před zaznamenáním průchodu musíte vybrat své JMÉNO SČÍTAČE!")
 
-# --- VRÁCENÁ AKČNÍ TLAČÍTKA ---
+# --- AKČNÍ TLAČÍTKA ---
 col_prichod, col_odchod = st.columns(2)
 
 with col_prichod:
