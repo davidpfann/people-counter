@@ -5,10 +5,56 @@ import json
 
 st.set_page_config(layout="centered")
 
+# --- Globální CSS injekce pro fixní jednořádkový design na mobilech + zelené tlačítko ---
+st.html("""
+<style>
+    /* 1. Vynucení jednoho řádku pro parametry (Pes, Aktovka, Nákup, Otočka) na mobilu */
+    div[data-testid="stFormRow"], 
+    div[data-testid="element-container"]:has(div.stSegmentedControl) {
+        margin-bottom: -5px !important;
+    }
+    
+    div.stSegmentedControl {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        gap: 10px !important;
+    }
+    
+    /* Vynutíme, aby popisek byl vlevo a tlačítka vpravo */
+    div.stSegmentedControl > label {
+        margin-bottom: 0 !important;
+        white-space: nowrap !important;
+        font-weight: bold !important;
+        font-size: 15px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    div.stSegmentedControl > div[role="radiogroup"] {
+        flex-grow: 1 !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+    }
+
+    /* 2. Stylování akčních tlačítek (Příchod = Zelená, Odchod = Červená) */
+    [data-testid="stHorizontalBlock"] > div:nth-child(1) button {
+        background-color: #28a745 !important;
+        color: white !important;
+        border-color: #28a745 !important;
+    }
+    [data-testid="stHorizontalBlock"] > div:nth-child(1) button:hover {
+        background-color: #218838 !important;
+        border-color: #1e7e34 !important;
+    }
+</style>
+""")
+
 # --- 1. NAČTENÍ SEZNAMU SČÍTAČŮ ---
 @st.cache_data(ttl=60)
 def nacti_scitace():
-    default_list = ["(Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
+    default_list = ["– (Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
     try:
         with open("scitaci.txt", "r", encoding="utf-8") as f:
             lines = [line.strip() for line in f.readlines() if line.strip()]
@@ -24,7 +70,6 @@ if "scitani_data" not in st.session_state:
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
-# Načtení z paměti prohlížeče při startu
 if "prazdny_start" not in st.session_state:
     st.session_state.prazdny_start = True
     js_load = """
@@ -72,45 +117,22 @@ if "poznamka_key" not in st.session_state:
 # Mód pohybu
 mod_dopravy = st.segmented_control(
     "Mód pohybu",
-    ["Chodec 🚶", "Běh🏃", "🚴", "🛴", "🛼", "Jiné"],
+    ["Chodec 🚶", "Běžec 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"],
     key="mod_dopravy_key",
     label_visibility="collapsed"
 )
 
-# --- PARAMETRY (Zkrácené texty a menší písmo, aby držely řádek) ---
-
-# 1. Řádek: Pes
-col1, col2 = st.columns([4, 3])
-with col1:
-    st.write("**🐕 Pes?**")
-with col2:
-    ma_psa = st.segmented_control("Pes", ["–", "Ano", "Ne"], key="ma_psa_key", label_visibility="collapsed")
-
-# 2. Řádek: Aktovka
-col1, col2 = st.columns([4, 3])
-with col1:
-    st.write("**🎒 Aktovka?**")
-with col2:
-    ma_aktovku = st.segmented_control("Aktovka", ["–", "Ano", "Ne"], key="ma_aktovku_key", label_visibility="collapsed")
-
-# 3. Řádek: Nákup
-col1, col2 = st.columns([4, 3])
-with col1:
-    st.write("**🛍️ Nákup?**")
-with col2:
-    ma_nakup = st.segmented_control("Nákup", ["–", "Ano", "Ne"], key="ma_nakup_key", label_visibility="collapsed")
-
-# 4. Řádek: Otočka
-col1, col2 = st.columns([4, 3])
-with col1:
-    st.write("**🔄 Otočka?**")
-with col2:
-    je_otocka = st.segmented_control("Otočka", ["–", "Ano", "Ne"], key="je_otocka_key", label_visibility="collapsed")
+# --- PARAMETRY NA JEDEN ŘÁDEK (Čisté nativní volání, strukturu drží flexibilní CSS výše) ---
+ma_psa = st.segmented_control("🐕 Pes?", ["–", "Ano", "Ne"], key="ma_psa_key")
+ma_aktovku = st.segmented_control("🎒 Aktovka?", ["–", "Ano", "Ne"], key="ma_aktovku_key")
+ma_nakup = st.segmented_control("🛍️ Nákup?", ["–", "Ano", "Ne"], key="ma_nakup_key")
+je_otocka = st.segmented_control("🔄 Otočka?", ["–", "Ano", "Ne"], key="je_otocka_key")
 
 # Věk pomocí segmentových tlačítek
+st.write("**Věk osoba:**")
 vek = st.segmented_control(
     "Věk",
-    ["Věk nezadán", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
+    ["Nezadán", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
     key="vek_key",
     label_visibility="collapsed"
 )
@@ -121,7 +143,7 @@ ve_skupine = st.checkbox("👥 Ve skupině s předchozím", key="ve_skupine_key"
 # Poznámka a Sčítač
 col_pozn, col_scit = st.columns(2)
 with col_pozn:
-    poznamka = st.text_input("Poznámka", placeholder="Poznámka...", key="poznamka_key", label_visibility="collapsed")
+    poznamka = st.text_input("Poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key", label_visibility="collapsed")
 with col_scit:
     scitac = st.selectbox("Jméno sčítače", seznam_scitacu, key="vyber_scitace_widget", label_visibility="collapsed")
 
@@ -141,7 +163,6 @@ def zpracuj_kliknuti(smer):
         if hodnota == "Ne": return False
         return None
 
-    # Načtení hodnot ze session_state
     v_ve_skupine = st.session_state.ve_skupine_key
     v_mod_dopravy = st.session_state.mod_dopravy_key
     v_vek = st.session_state.vek_key
@@ -176,7 +197,7 @@ def zpracuj_kliknuti(smer):
         "Scitac": scitac,
         "Smer": smer,
         "Mod_pohybu": v_mod_dopravy,
-        "Vek": v_vek if v_vek != "Věk nezadán" else None,
+        "Vek": v_vek if v_vek != "Nezadán" else None,
         "Pes": preved_stav(v_ma_psa),
         "Nakup": preved_stav(v_ma_nakup),
         "Aktovka": preved_stav(v_ma_aktovku),
@@ -188,7 +209,6 @@ def zpracuj_kliknuti(smer):
     
     st.session_state.scitani_data.append(zaznam)
     
-    # Zápis do LocalStorage mobilu
     js_save = f"""
     <script>
     localStorage.setItem('scitani_backup', JSON.stringify({json.dumps(st.session_state.scitani_data)}));
@@ -196,13 +216,11 @@ def zpracuj_kliknuti(smer):
     """
     st.components.v1.html(js_save, height=0, width=0)
     
-    # Plovoucí potvrzovací toast
     if smer == "prichod":
         st.toast(f"Zaznamenán PŘÍCHOD ({v_mod_dopravy})", icon="📥")
     else:
         st.toast(f"Zaznamenán ODCHOD ({v_mod_dopravy})", icon="📤")
         
-    # Reset prvků zpět na výchozí stavy
     st.session_state.mod_dopravy_key = "Chodec 🚶"
     st.session_state.ve_skupine_key = False
     st.session_state.ma_psa_key = "–"
@@ -212,36 +230,16 @@ def zpracuj_kliknuti(smer):
     st.session_state.vek_key = "Nezadán"
     st.session_state.poznamka_key = ""
 
-# Zobrazení chybové hlášky
 if st.session_state.get("chyba_scitace", False):
     st.error("❌ Před zaznamenáním průchodu musíte vybrat své JMÉNO SČÍTAČE!")
 
 # --- AKČNÍ TLAČÍTKA ---
-# Injekce stylu, která změní barvu prvního tlačítka na zelenou a ponechá červený text/podklad pro odchod
-st.html("""
-<style>
-    /* Zacílíme na první sloupec s příchodem a změníme barvu na zelenou */
-    [data-testid="stHorizontalBlock"] > div:nth-child(1) button {
-        background-color: #28a745 !important;
-        color: white !important;
-        border-color: #28a745 !important;
-    }
-    /* Efekt při najetí myší/klepnutí palce (ztmavnutí zelené) */
-    [data-testid="stHorizontalBlock"] > div:nth-child(1) button:hover {
-        background-color: #218838 !important;
-        border-color: #1e7e34 !important;
-    }
-</style>
-""")
-
 col_prichod, col_odchod = st.columns(2)
 
 with col_prichod:
-    # Odstranili jsme emoji z textu, protože zelené je teď celé tlačítko
     st.button("PŘÍCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("prichod",))
 
 with col_odchod:
-    # Odchod zůstává v původním červeném designu aplikace, emoji dáváme pryč pro čistý styl
     st.button("ODCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("odchod",))
 
 # --- TLAČÍTKO PRO VYMAZÁNÍ PAMĚTI ---
