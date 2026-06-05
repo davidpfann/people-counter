@@ -100,7 +100,7 @@ if "ma_aktovku_key" not in st.session_state:
 if "je_otocka_key" not in st.session_state:
     st.session_state.je_otocka_key = "–"
 if "vek_key" not in st.session_state:
-    st.session_state.vek_key = "Nezadán"
+    st.session_state.vek_key = "Věk nezadán"
 if "poznamka_key" not in st.session_state:
     st.session_state.poznamka_key = ""
 
@@ -146,10 +146,9 @@ with c2:
 
 
 # Věk pomocí segmentových tlačítek
-st.write("**Věk osoba:**")
 vek = st.segmented_control(
     "Věk",
-    ["Nezadán", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
+    ["Věk nezadán", "3+", "7+", "13+", "19+", "30+", "60+", "75+"],
     key="vek_key",
     label_visibility="collapsed"
 )
@@ -214,7 +213,7 @@ def zpracuj_kliknuti(smer):
         "Scitac": scitac,
         "Smer": smer,
         "Mod_pohybu": v_mod_dopravy,
-        "Vek": v_vek if v_vek != "Nezadán" else None,
+        "Vek": v_vek if v_vek != "Věk nezadán" else None,
         "Pes": preved_stav(v_ma_psa),
         "Nakup": preved_stav(v_ma_nakup),
         "Aktovka": preved_stav(v_ma_aktovku),
@@ -244,5 +243,5 @@ def zpracuj_kliknuti(smer):
     st.session_state.ma_nakup_key = "–"
     st.session_state.ma_aktovku_key = "–"
     st.session_state.je_otocka_key = "–"
-    st.session_state.vek_key = "Nezadán"
+    st.session_state.vek_key = "Věk nezadán"
     st.session_state.poznamka_key = ""
