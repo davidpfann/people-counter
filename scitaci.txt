@@ -1,6 +1,5 @@
-– (Vyber jméno)
+Anonymní sčítač
 David Pfann
 Michal Uhlík
 Jakub Veselý
 Filip Tluček
-anonymní
