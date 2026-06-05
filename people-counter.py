@@ -8,7 +8,7 @@ st.set_page_config(layout="centered")
 # --- 1. NAČTENÍ SEZNAMU SČÍTAČŮ ---
 @st.cache_data(ttl=60)
 def nacti_scitace():
-    default_list = ["– (Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
+    default_list = ["(Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
     try:
         with open("scitaci.txt", "r", encoding="utf-8") as f:
             lines = [line.strip() for line in f.readlines() if line.strip()]
@@ -70,11 +70,11 @@ if "poznamka_key" not in st.session_state:
 # --- ROZHRANÍ APLIKACE ---
 
 # Mód pohybu
-mod_dopravy = st.radio(
-    "Mód pohybu", 
-    ["Chodec 🚶", "Běžec 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"], 
-    horizontal=True, 
-    key="mod_dopravy_key",
+# Mód pomocí segmentových tlačítek
+mod_dopravy = st.segmented_control(
+    "Mód pohybu",
+    ["Chodec 🚶", "Běžec 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"],
+    key="vek_key",
     label_visibility="collapsed"
 )
 
@@ -98,7 +98,7 @@ with col_b:
     je_otocka = st.segmented_control("Otočka", ["–", "Ano", "Ne"], key="je_otocka_key", label_visibility="collapsed")
 
 # Věk pomocí segmentových tlačítek
-st.write("**Věk osoba:**")
+st.write("**Věk:**")
 vek = st.segmented_control(
     "Věk",
     ["Nezadán", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
