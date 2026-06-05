@@ -5,46 +5,38 @@ import json
 
 st.set_page_config(layout="centered")
 
-# --- Globální CSS injekce pro fixní jednořádkový design na mobilech + zelené tlačítko ---
+# --- Globální CSS injekce pro fixní jednořádkový design sloupců + zelené tlačítko ---
 st.html("""
 <style>
-    /* 1. Vynucení jednoho řádku pro parametry (Pes, Aktovka, Nákup, Otočka) na mobilu */
-    div[data-testid="stFormRow"], 
-    div[data-testid="element-container"]:has(div.stSegmentedControl) {
-        margin-bottom: -5px !important;
-    }
-    
-    div.stSegmentedControl {
+    /* Vynutíme, aby columns držely vedle sebe i na sebemenším mobilu a nezalamovaly se pod sebe */
+    [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
+        flex-wrap: nowrap !important;
         align-items: center !important;
         justify-content: space-between !important;
-        width: 100% !important;
         gap: 10px !important;
     }
     
-    /* Vynutíme, aby popisek byl vlevo a tlačítka vpravo */
-    div.stSegmentedControl > label {
-        margin-bottom: 0 !important;
-        white-space: nowrap !important;
-        font-weight: bold !important;
-        font-size: 15px !important;
-        flex-shrink: 0 !important;
+    /* Levý sloupec s textem se nebude zalamovat */
+    [data-testid="stHorizontalBlock"] > div:nth-child(1) {
+        flex-grow: 1 !important;
+        min-width: fit-content !important;
     }
     
-    div.stSegmentedControl > div[role="radiogroup"] {
-        flex-grow: 1 !important;
-        display: flex !important;
-        justify-content: flex-end !important;
+    /* Pravý sloupec s tlačítky se přitlačí doprava */
+    [data-testid="stHorizontalBlock"] > div:nth-child(2) {
+        flex-grow: 0 !important;
+        min-width: max-content !important;
     }
 
-    /* 2. Stylování akčních tlačítek (Příchod = Zelená, Odchod = Červená) */
-    [data-testid="stHorizontalBlock"] > div:nth-child(1) button {
+    /* Stylování akčních tlačítek (Příchod = Zelená, Odchod = Červená) */
+    [data-testid="stHorizontalBlock"]:last-of-type > div:nth-child(1) button {
         background-color: #28a745 !important;
         color: white !important;
         border-color: #28a745 !important;
     }
-    [data-testid="stHorizontalBlock"] > div:nth-child(1) button:hover {
+    [data-testid="stHorizontalBlock"]:last-of-type > div:nth-child(1) button:hover {
         background-color: #218838 !important;
         border-color: #1e7e34 !important;
     }
@@ -117,16 +109,41 @@ if "poznamka_key" not in st.session_state:
 # Mód pohybu
 mod_dopravy = st.segmented_control(
     "Mód pohybu",
-    ["Chodec 🚶", "Běžec 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"],
+    ["Chodec 🚶", "Běh🏃", " 🚴 ", " 🛴 ", " 🛼 ", "Jiné"],
     key="mod_dopravy_key",
     label_visibility="collapsed"
 )
 
-# --- PARAMETRY NA JEDEN ŘÁDEK (Čisté nativní volání, strukturu drží flexibilní CSS výše) ---
-ma_psa = st.segmented_control("🐕 Pes?", ["–", "Ano", "Ne"], key="ma_psa_key")
-ma_aktovku = st.segmented_control("🎒 Aktovka?", ["–", "Ano", "Ne"], key="ma_aktovku_key")
-ma_nakup = st.segmented_control("🛍️ Nákup?", ["–", "Ano", "Ne"], key="ma_nakup_key")
-je_otocka = st.segmented_control("🔄 Otočka?", ["–", "Ano", "Ne"], key="je_otocka_key")
+# --- PARAMETRY (Sloupce s vynuceným no-wrapem přes CSS) ---
+
+# 1. Řádek: Pes
+c1, c2 = st.columns([1, 1])
+with c1:
+    st.write("**🐕 Pes?**")
+with c2:
+    ma_psa = st.segmented_control("Pes", ["–", "Ano", "Ne"], key="ma_psa_key", label_visibility="collapsed")
+
+# 2. Řádek: Aktovka
+c1, c2 = st.columns([1, 1])
+with c1:
+    st.write("**🎒 Aktovka?**")
+with c2:
+    ma_aktovku = st.segmented_control("Aktovka", ["–", "Ano", "Ne"], key="ma_aktovku_key", label_visibility="collapsed")
+
+# 3. Řádek: Nákup
+c1, c2 = st.columns([1, 1])
+with c1:
+    st.write("**🛍️ Nákup?**")
+with c2:
+    ma_nakup = st.segmented_control("Nákup", ["–", "Ano", "Ne"], key="ma_nakup_key", label_visibility="collapsed")
+
+# 4. Řádek: Otočka
+c1, c2 = st.columns([1, 1])
+with c1:
+    st.write("**🔄 Otočka?**")
+with c2:
+    je_otocka = st.segmented_control("Otočka", ["–", "Ano", "Ne"], key="je_otocka_key", label_visibility="collapsed")
+
 
 # Věk pomocí segmentových tlačítek
 st.write("**Věk osoba:**")
@@ -176,7 +193,7 @@ def zpracuj_kliknuti(smer):
     id_skupiny = None
 
     if v_ve_skupine:
-        je_skupina = True
+        je_skipina = True
         if st.session_state.aktualni_id_skupiny is not None:
             id_skupiny = st.session_state.aktualni_id_skupiny
         else:
@@ -229,36 +246,3 @@ def zpracuj_kliknuti(smer):
     st.session_state.je_otocka_key = "–"
     st.session_state.vek_key = "Nezadán"
     st.session_state.poznamka_key = ""
-
-if st.session_state.get("chyba_scitace", False):
-    st.error("❌ Před zaznamenáním průchodu musíte vybrat své JMÉNO SČÍTAČE!")
-
-# --- AKČNÍ TLAČÍTKA ---
-col_prichod, col_odchod = st.columns(2)
-
-with col_prichod:
-    st.button("PŘÍCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("prichod",))
-
-with col_odchod:
-    st.button("ODCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("odchod",))
-
-# --- TLAČÍTKO PRO VYMAZÁNÍ PAMĚTI ---
-def smazat_vsechno():
-    st.session_state.scitani_data = []
-    st.session_state.aktualni_id_skupiny = None
-
-st.write("")
-if st.button("🗑️ Vymazat historii a začít znova", use_container_width=True):
-    smazat_vsechno()
-    st.components.v1.html("<script>localStorage.removeItem('scitani_backup');</script>", height=0, width=0)
-    st.rerun()
-
-# --- EXPORT VÝSLEDKŮ ---
-if st.session_state.scitani_data:
-    st.markdown("---")
-    df = pd.DataFrame(st.session_state.scitani_data)
-    st.write(f"Celkem zaznamenáno průchodů: **{len(df)}**")
-    st.dataframe(df.tail(3), use_container_width=True)
-    
-    csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Stáhnout kompletní CSV", csv, "scitani_chodcu.csv", "text/csv", use_container_width=True)
