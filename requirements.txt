@@ -2,5 +2,3 @@ streamlit
 pandas
 st-files-connection
 gspread
-json
-datetime
