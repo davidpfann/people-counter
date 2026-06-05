@@ -72,7 +72,7 @@ if "poznamka_key" not in st.session_state:
 # Mód pohybu
 mod_dopravy = st.segmented_control(
     "Mód pohybu",
-    ["Chodec 🚶", "Běžec 🏃", "Kolo 🚴", "Koloběžka 🛴", "Jiné"],
+    ["Chodec 🚶", "Běžec 🏃", "🚴", "🛴", "🛼", "Jiné"],
     key="mod_dopravy_key",
     label_visibility="collapsed"
 )
@@ -108,7 +108,7 @@ with col2:
     je_otocka = st.segmented_control("Otočka", ["–", "Ano", "Ne"], key="je_otocka_key", label_visibility="collapsed")
 
 # Věk pomocí segmentových tlačítek
-st.write("**Věk osoba:**")
+st.write("**Věk:**")
 vek = st.segmented_control(
     "Věk",
     ["Nezadán", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
@@ -122,7 +122,7 @@ ve_skupine = st.checkbox("👥 Ve skupině s předchozím", key="ve_skupine_key"
 # Poznámka a Sčítač
 col_pozn, col_scit = st.columns(2)
 with col_pozn:
-    poznamka = st.text_input("Poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key", label_visibility="collapsed")
+    poznamka = st.text_input("Poznámka", placeholder="Poznámka...", key="poznamka_key", label_visibility="collapsed")
 with col_scit:
     scitac = st.selectbox("Jméno sčítače", seznam_scitacu, key="vyber_scitace_widget", label_visibility="collapsed")
 
