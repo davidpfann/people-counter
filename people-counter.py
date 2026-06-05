@@ -5,7 +5,7 @@ import json
 
 st.set_page_config(layout="centered")
 
-# --- Globální CSS injekce for fixní jednořádkový design, spodní toast a zelené tlačítko ---
+# --- Globální CSS injekce pro fixní jednořádkový design sloupců + spodní toast + zelené tlačítko ---
 st.html("""
 <style>
     /* Vynutíme, aby columns držely vedle sebe i na sebemenším mobilu a nezalamovaly se pod sebe */
@@ -30,7 +30,7 @@ st.html("""
         min-width: max-content !important;
     }
 
-    /* POSUNUTÍ A ZMENŠENÍ TOASTU: Přesuneme ho dolů, aby nezavázel nahoře u módů dopravy */
+    /* POSUNUTÍ A ZMENŠENÍ TOASTU dolů, aby nepřekrýval horní menu */
     [data-testid="stToastContainer"] {
         top: auto !important;
         bottom: 20px !important;
@@ -69,44 +69,43 @@ def nacti_scitace():
 
 seznam_scitacu = nacti_scitace()
 
-# --- 2. ROBUSTNÍ LOGIKA PRO LOCAL STORAGE (OBNOVENÍ HISTORIE PO REFRESHU) ---
+# --- 2. NOVÁ ROBUSTNÍ BEZRESTARTOVÁ LOGIKA PRO LOCAL STORAGE ---
 if "scitani_data" not in st.session_state:
     st.session_state.scitani_data = []
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
-# Skrytý obousměrný most mezi JavaScriptem v mobilu a Pythonem na serveru
-if "prazdny_start" not in st.session_state:
-    st.session_state.prazdny_start = True
-
-# Tento HTML/JS prvek slouží jako aktivní přijímač zpráv z LocalStorage
-receiver_html = """
+# JavaScriptový injektor, který přečte vnitřní paměť mobilu a bezpečně ji předá Pythonu bez cyklení stránky
+js_bridge = """
 <script>
-    const data = localStorage.getItem('scitani_backup');
-    // Pošleme data zpět do Streamlitu přes standardní rozhraní
-    window.parent.postMessage({
-        type: 'streamlit:setComponentValue',
-        value: data ? data : '[]'
-    }, '*');
+    const sendData = () => {
+        const data = localStorage.getItem('scitani_backup');
+        if (data) {
+            window.parent.postMessage({
+                type: 'streamlit:setComponentValue',
+                value: data
+            }, '*');
+        }
+    };
+    // Spustíme hned po načtení prvků
+    setTimeout(sendData, 100);
 </script>
 """
-# Spustíme přijímač a uložíme výstup do st.session_state pod klíčem "backup_bridge"
-ctx = st.html(f"<div style='display:none;'>{receiver_html}</div>")
 
-# Pokud se stránka načetla poprvé a přijímač chytil data z mobilu, naplníme historii
-if st.session_state.prazdny_start:
-    # Přístup k datům z naposledy vykonaného skriptu
-    try:
-        # Hledáme, jestli nám prohlížeč poslal uloženou cache
-        js_data = st.session_state.get("backup_bridge")
-        if js_data:
-            loaded_data = json.loads(js_data)
-            if loaded_data and not st.session_state.scitani_data:
-                st.session_state.scitani_data = loaded_data
-                st.session_state.prazdny_start = False
-                st.rerun() # Rychlý restart, ať tabulka hned naskočí vykreslená
-    except Exception:
-        pass
+# Vytvoření stabilního datového kanálu pod klíčem "backup_bridge"
+# label_visibility="collapsed" schová pomocné okno, style ho zneviditelní
+with st.container():
+    st.html(f"<div style='display:none;'>{js_bridge}</div>")
+    # Trik: využijeme query parametry nebo session_state, abychom načetli data bez st.rerun()
+    captured_json = st.session_state.get("backup_bridge")
+    
+    if captured_json and not st.session_state.scitani_data:
+        try:
+            loaded_list = json.loads(captured_json)
+            if isinstance(loaded_list, list) and len(loaded_list) > 0:
+                st.session_state.scitani_data = loaded_list
+        except Exception:
+            pass
 
 # Výchozí hodnoty pro reset formuláře
 if "mod_dopravy_key" not in st.session_state:
@@ -245,7 +244,7 @@ def zpracuj_kliknuti(smer):
     
     st.session_state.scitani_data.append(zaznam)
     
-    # Okamžitý zápis do skryté paměti mobilu
+    # Bezpečný tichý zápis na pozadí
     js_save = f"""
     <script>
     localStorage.setItem('scitani_backup', JSON.stringify({json.dumps(st.session_state.scitani_data)}));
@@ -267,6 +266,7 @@ def zpracuj_kliknuti(smer):
     st.session_state.vek_key = "Věk nezadán"
     st.session_state.poznamka_key = ""
 
+# Chybová hláška
 if st.session_state.get("chyba_scitace", False):
     st.error("❌ Před zaznamenáním průchodu musíte vybrat své JMÉNO SČÍTAČE!")
 
