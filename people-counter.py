@@ -8,7 +8,7 @@ st.set_page_config(layout="centered")
 # --- 1. NAČTENÍ SEZNAMU SČÍTAČŮ ---
 @st.cache_data(ttl=60)
 def nacti_scitace():
-    default_list = ["– (Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
+    default_list = ["(Vyber jméno sčítače)", "Sčítač 1", "Sčítač 2"]
     try:
         with open("scitaci.txt", "r", encoding="utf-8") as f:
             lines = [line.strip() for line in f.readlines() if line.strip()]
@@ -72,7 +72,7 @@ if "poznamka_key" not in st.session_state:
 # Mód pohybu
 mod_dopravy = st.segmented_control(
     "Mód pohybu",
-    ["Chodec 🚶", "Běžec 🏃", "🚴", "🛴", "🛼", "Jiné"],
+    ["Chodec 🚶", "Běh🏃", "🚴", "🛴", "🛼", "Jiné"],
     key="mod_dopravy_key",
     label_visibility="collapsed"
 )
@@ -108,10 +108,9 @@ with col2:
     je_otocka = st.segmented_control("Otočka", ["–", "Ano", "Ne"], key="je_otocka_key", label_visibility="collapsed")
 
 # Věk pomocí segmentových tlačítek
-st.write("**Věk:**")
 vek = st.segmented_control(
     "Věk",
-    ["Nezadán", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
+    ["Věk nezadán", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
     key="vek_key",
     label_visibility="collapsed"
 )
@@ -177,7 +176,7 @@ def zpracuj_kliknuti(smer):
         "Scitac": scitac,
         "Smer": smer,
         "Mod_pohybu": v_mod_dopravy,
-        "Vek": v_vek if v_vek != "Nezadán" else None,
+        "Vek": v_vek if v_vek != "Věk nezadán" else None,
         "Pes": preved_stav(v_ma_psa),
         "Nakup": preved_stav(v_ma_nakup),
         "Aktovka": preved_stav(v_ma_aktovku),
@@ -218,13 +217,32 @@ if st.session_state.get("chyba_scitace", False):
     st.error("❌ Před zaznamenáním průchodu musíte vybrat své JMÉNO SČÍTAČE!")
 
 # --- AKČNÍ TLAČÍTKA ---
+# Injekce stylu, která změní barvu prvního tlačítka na zelenou a ponechá červený text/podklad pro odchod
+st.html("""
+<style>
+    /* Zacílíme na první sloupec s příchodem a změníme barvu na zelenou */
+    [data-testid="stHorizontalBlock"] > div:nth-child(1) button {
+        background-color: #28a745 !important;
+        color: white !important;
+        border-color: #28a745 !important;
+    }
+    /* Efekt při najetí myší/klepnutí palce (ztmavnutí zelené) */
+    [data-testid="stHorizontalBlock"] > div:nth-child(1) button:hover {
+        background-color: #218838 !important;
+        border-color: #1e7e34 !important;
+    }
+</style>
+""")
+
 col_prichod, col_odchod = st.columns(2)
 
 with col_prichod:
-    st.button("🟢 PŘÍCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("prichod",))
+    # Odstranili jsme emoji z textu, protože zelené je teď celé tlačítko
+    st.button("PŘÍCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("prichod",))
 
 with col_odchod:
-    st.button("🔴 ODCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("odchod",))
+    # Odchod zůstává v původním červeném designu aplikace, emoji dáváme pryč pro čistý styl
+    st.button("ODCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("odchod",))
 
 # --- TLAČÍTKO PRO VYMAZÁNÍ PAMĚTI ---
 def smazat_vsechno():
