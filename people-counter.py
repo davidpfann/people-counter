@@ -106,7 +106,7 @@ if "poznamka_key" not in st.session_state:
 
 # --- ROZHRANÍ APLIKACE ---
 
-# Mód pohybu
+# Mód pohybu (Tvoje integrovaná verze s bruslemi)
 mod_dopravy = st.segmented_control(
     "Mód pohybu",
     ["Chodec 🚶", "Běh🏃", " 🚴 ", " 🛴 ", " 🛼 ", "Jiné"],
@@ -144,24 +144,23 @@ with c1:
 with c2:
     je_otocka = st.segmented_control("Otočka", ["–", "Ano", "Ne"], key="je_otocka_key", label_visibility="collapsed")
 
-
-# Věk pomocí segmentových tlačítek
+# Věk pomocí segmentových tlačítek (Tvoje integrovaná verze s rozsahy)
 vek = st.segmented_control(
     "Věk",
-    ["Věk nezadán", "3+", "7+", "13+", "19+", "30+", "60+", "75+"],
+    ["Věk nezadán", "3+", "6+", "12+", "18+", "30+", "60+", "75+"],
     key="vek_key",
     label_visibility="collapsed"
 )
 
-# Skupina přesunutá dolů nad akční tlačítka
-ve_skupine = st.checkbox("👥 Ve skupině s předchozím", key="ve_skupine_key")
+# Skupina přesunutá dolů nad akční tlačítka (Tvoje integrovaná verze textu)
+ve_skupine = st.checkbox("👥 Šli ve skupině s předchozím zadaným", key="ve_skupine_key")
 
-# Poznámka a Sčítač
-col_pozn, col_scit = st.columns(2)
-with col_pozn:
-    poznamka = st.text_input("Poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key", label_visibility="collapsed")
+# Poznámka a Sčítač (Tvoje integrované prohození sloupců)
+col_scit, col_pozn = st.columns(2)
 with col_scit:
     scitac = st.selectbox("Jméno sčítače", seznam_scitacu, key="vyber_scitace_widget", label_visibility="collapsed")
+with col_pozn:
+    poznamka = st.text_input("Poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key", label_visibility="collapsed")
 
 # --- FUNKCE PRO ZÁPIS A RESET ---
 def zpracuj_kliknuti(smer):
@@ -192,7 +191,7 @@ def zpracuj_kliknuti(smer):
     id_skupiny = None
 
     if v_ve_skupine:
-        je_skipina = True
+        je_skupina = True
         if st.session_state.aktualni_id_skupiny is not None:
             id_skupiny = st.session_state.aktualni_id_skupiny
         else:
@@ -245,3 +244,37 @@ def zpracuj_kliknuti(smer):
     st.session_state.je_otocka_key = "–"
     st.session_state.vek_key = "Věk nezadán"
     st.session_state.poznamka_key = ""
+
+# Zobrazení chybové hlášky, pokud není vybráno jméno
+if st.session_state.get("chyba_scitace", False):
+    st.error("❌ Před zaznamenáním průchodu musíte vybrat své JMÉNO SČÍTAČE!")
+
+# --- VRÁCENÁ AKČNÍ TLAČÍTKA ---
+col_prichod, col_odchod = st.columns(2)
+
+with col_prichod:
+    st.button("PŘÍCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("prichod",))
+
+with col_odchod:
+    st.button("ODCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("odchod",))
+
+# --- TLAČÍTKO PRO VYMAZÁNÍ PAMĚTI ---
+def smazat_vsechno():
+    st.session_state.scitani_data = []
+    st.session_state.aktualni_id_skupiny = None
+
+st.write("")
+if st.button("🗑️ Vymazat historii a začít znova", use_container_width=True):
+    smazat_vsechno()
+    st.components.v1.html("<script>localStorage.removeItem('scitani_backup');</script>", height=0, width=0)
+    st.rerun()
+
+# --- EXPORT VÝSLEDKŮ ---
+if st.session_state.scitani_data:
+    st.markdown("---")
+    df = pd.DataFrame(st.session_state.scitani_data)
+    st.write(f"Celkem zaznamenáno průchodů: **{len(df)}**")
+    st.dataframe(df.tail(3), use_container_width=True)
+    
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Stáhnout kompletní CSV", csv, "scitani_chodcu.csv", "text/csv", use_container_width=True)
