@@ -49,19 +49,19 @@ if backup_data and st.session_state.prazdny_start:
         pass
     st.session_state.prazdny_start = False
 
-# Výchozí hodnoty pro reset formuláře
+# Výchozí hodnoty pro reset formuláře (Změněno na třípólové hodnoty)
 if "mod_dopravy_key" not in st.session_state:
     st.session_state.mod_dopravy_key = "Chodec 🚶"
 if "ve_skupine_key" not in st.session_state:
     st.session_state.ve_skupine_key = False
 if "ma_psa_key" not in st.session_state:
-    st.session_state.ma_psa_key = False
+    st.session_state.ma_psa_key = "–"
 if "ma_nakup_key" not in st.session_state:
-    st.session_state.ma_nakup_key = False
+    st.session_state.ma_nakup_key = "–"
 if "ma_aktovku_key" not in st.session_state:
-    st.session_state.ma_aktovku_key = False
+    st.session_state.ma_aktovku_key = "–"
 if "je_otocka_key" not in st.session_state:
-    st.session_state.je_otocka_key = False
+    st.session_state.je_otocka_key = "–"
 if "vek_key" not in st.session_state:
     st.session_state.vek_key = "Nezadán"
 if "poznamka_key" not in st.session_state:
@@ -78,33 +78,44 @@ mod_dopravy = st.radio(
     label_visibility="collapsed"
 )
 
-# Skupina
-ve_skupine = st.checkbox("👥 Šel/šla ve skupině s předchozím", key="ve_skupine_key")
+# Skupina (Zkrácený text, aby netvořil druhý řádek)
+ve_skupine = st.checkbox("👥 Ve skupině s předchozím", key="ve_skupine_key")
 
-# Šoupátka (Toggles)
-ma_psa = st.toggle("🐕 Pes?", key="ma_psa_key")
-ma_nakup = st.toggle("🛍️ Nákup?", key="ma_nakup_key")
-ma_aktovku = st.toggle("🎒 Školní aktovka?", key="ma_aktovku_key")
-je_otocka = st.toggle("🔄 Otočka/Návrat?", key="je_otocka_key")
+# Parametry s volbou Ano/Ne/Nezadán (Pomocí kompaktních jednořádkových segmentů)
+col_a, col_b = st.columns(2)
+with col_a:
+    st.write("**🐕 Pes?**")
+    ma_psa = st.segmented_control("Pes", ["–", "Ano", "Ne"], key="ma_psa_key", label_visibility="collapsed")
+    
+    st.write("**🎒 Školní aktovka?**")
+    ma_aktovku = st.segmented_control("Aktovka", ["–", "Ano", "Ne"], key="ma_aktovku_key", label_visibility="collapsed")
 
-# Věk pomocí pilulkových tlačítek (Na první pozici změněno na "Nezadán")
+with col_b:
+    st.write("**🛍️ Nákup?**")
+    ma_nakup = st.segmented_control("Nákup", ["–", "Ano", "Ne"], key="ma_nakup_key", label_visibility="collapsed")
+    
+    st.write("**🔄 Otočka/Návrat?**")
+    je_otocka = st.segmented_control("Otočka", ["–", "Ano", "Ne"], key="je_otocka_key", label_visibility="collapsed")
+
+# Věk pomocí segmentových tlačítek
 st.write("**Věk osoba:**")
-vek = st.pills(
+vek = st.segmented_control(
     "Věk",
     ["Nezadán", "3–6", "7–12", "13–18", "19–30", "30–65", "60–75", "75+"],
     key="vek_key",
     label_visibility="collapsed"
 )
 
-# Poznámka a Sčítač vedle sebe na jednom řádku (Těsně nad tlačítky, bez textových nadpisů)
+# Poznámka a Sčítač (S opraveným názvem a textem)
 col_pozn, col_scit = st.columns(2)
 with col_pozn:
     poznamka = st.text_input("Poznámka", placeholder="Dobrovolná poznámka...", key="poznamka_key", label_visibility="collapsed")
 with col_scit:
-    scitac = st.selectbox("Jméno sčítače", seznam_scitacu, label_visibility="collapsed")
+    scitac = st.selectbox("Jméno sčítače", seznam_scitacu, key="vyber_scitace_widget", label_visibility="collapsed")
 
 # --- FUNKCE PRO ZÁPIS A RESET ---
 def zpracuj_kliknuti(smer):
+    # Kontrola správného řetězce
     if scitac == "– (Vyber jméno sčítače)":
         st.session_state["chyba_scitace"] = True
         return
@@ -113,6 +124,12 @@ def zpracuj_kliknuti(smer):
 
     nyni = datetime.datetime.now()
     timestamp_str = nyni.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Pomocná funkce pro převod tří stavů do databáze
+    def preved_stav(hodnota):
+        if hodnota == "Ano": return True
+        if hodnota == "Ne": return False
+        return None
 
     # Načtení hodnot ze session_state
     v_ve_skupine = st.session_state.ve_skupine_key
@@ -150,10 +167,10 @@ def zpracuj_kliknuti(smer):
         "Smer": smer,
         "Mod_pohybu": v_mod_dopravy,
         "Vek": v_vek if v_vek != "Nezadán" else None,
-        "Pes": True if v_ma_psa else None,
-        "Nakup": True if v_ma_nakup else None,
-        "Aktovka": True if v_ma_aktovku else None,
-        "Otocka": True if v_je_otocka else None,
+        "Pes": preved_stav(v_ma_psa),
+        "Nakup": preved_stav(v_ma_nakup),
+        "Aktovka": preved_stav(v_ma_aktovku),
+        "Otocka": preved_stav(v_je_otocka),
         "Je_skupina": je_skupina,
         "ID_skupiny": id_skupiny,
         "Poznamka": v_poznamka if v_poznamka else None
@@ -169,13 +186,13 @@ def zpracuj_kliknuti(smer):
     """
     st.components.v1.html(js_save, height=0, width=0)
     
-    # Reset prvků
+    # Reset prvků zpět na výchozí stavy (včetně pomlček)
     st.session_state.mod_dopravy_key = "Chodec 🚶"
     st.session_state.ve_skupine_key = False
-    st.session_state.ma_psa_key = False
-    st.session_state.ma_nakup_key = False
-    st.session_state.ma_aktovku_key = False
-    st.session_state.je_otocka_key = False
+    st.session_state.ma_psa_key = "–"
+    st.session_state.ma_nakup_key = "–"
+    st.session_state.ma_aktovku_key = "–"
+    st.session_state.je_otocka_key = "–"
     st.session_state.vek_key = "Nezadán"
     st.session_state.poznamka_key = ""
 
@@ -183,14 +200,14 @@ def zpracuj_kliknuti(smer):
 if st.session_state.get("chyba_scitace", False):
     st.error("❌ Před zaznamenáním průchodu musíte vybrat své JMÉNO SČÍTAČE!")
 
-# --- AKČNÍ TLAČÍTKA (S přidanými barevnými ikonami šipek) ---
+# --- AKČNÍ TLAČÍTKA ---
 col_prichod, col_odchod = st.columns(2)
 
 with col_prichod:
-    st.button("🟢 📥 PŘÍCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("prichod",))
+    st.button("🟢 PŘÍCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("prichod",))
 
 with col_odchod:
-    st.button("📤 🔴 ODCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("odchod",))
+    st.button("🔴 ODCHOD", use_container_width=True, type="primary", on_click=zpracuj_kliknuti, args=("odchod",))
 
 # --- TLAČÍTKO PRO VYMAZÁNÍ PAMĚTI ---
 def smazat_vsechno():
