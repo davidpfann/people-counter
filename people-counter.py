@@ -69,43 +69,62 @@ def nacti_scitace():
 
 seznam_scitacu = nacti_scitace()
 
-# --- 2. NOVÁ ROBUSTNÍ BEZRESTARTOVÁ LOGIKA PRO LOCAL STORAGE ---
+# --- 2. DEFINITIVNÍ OPRAVA PRO LOCAL STORAGE ---
 if "scitani_data" not in st.session_state:
     st.session_state.scitani_data = []
 if "aktualni_id_skupiny" not in st.session_state:
     st.session_state.aktualni_id_skupiny = None
 
-# JavaScriptový injektor, který přečte vnitřní paměť mobilu a bezpečně ji předá Pythonu bez cyklení stránky
-js_bridge = """
+# Vytvoření speciálního skrytého textového pole, do kterého JavaScript z telefonu vpíše data navrácená z paměti
+# Streamlit toto pole dokáže nativně přečíst hned při startu
+if "js_executed" not in st.session_state:
+    st.session_state.js_executed = False
+
+# JavaScript, který vytáhne data z paměti telefonu a vloží je do skrytého text inputu
+js_load_script = """
 <script>
-    const sendData = () => {
+    setTimeout(function() {
         const data = localStorage.getItem('scitani_backup');
         if (data) {
-            window.parent.postMessage({
-                type: 'streamlit:setComponentValue',
-                value: data
-            }, '*');
+            // Najdeme skryté textové pole a vlepíme do něj JSON z paměti telefonu
+            const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+            for (let input of inputs) {
+                if (input.placeholder === "storage_bridge_placeholder") {
+                    if (input.value !== data) {
+                        input.value = data;
+                        // Vyvoláme změnu, aby si toho Streamlit všiml
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+            }
         }
-    };
-    // Spustíme hned po načtení prvků
-    setTimeout(sendData, 100);
+    }, 300);
 </script>
 """
 
-# Vytvoření stabilního datového kanálu pod klíčem "backup_bridge"
-# label_visibility="collapsed" schová pomocné okno, style ho zneviditelní
-with st.container():
-    st.html(f"<div style='display:none;'>{js_bridge}</div>")
-    # Trik: využijeme query parametry nebo session_state, abychom načetli data bez st.rerun()
-    captured_json = st.session_state.get("backup_bridge")
-    
-    if captured_json and not st.session_state.scitani_data:
-        try:
-            loaded_list = json.loads(captured_json)
-            if isinstance(loaded_list, list) and len(loaded_list) > 0:
-                st.session_state.scitani_data = loaded_list
-        except Exception:
-            pass
+# Vykreslíme neviditelný most
+st.markdown(f"<div style='display:none;'>{js_load_script}</div>", unsafe_html=True)
+storage_bridge = st.text_input(
+    "bridge", 
+    placeholder="storage_bridge_placeholder", 
+    label_visibility="collapsed"
+)
+
+# Pokud most zachytil data z telefonu a naše interní tabulka je prázdná, naplníme ji
+if storage_bridge and not st.session_state.scitani_data and not st.session_state.js_executed:
+    try:
+        loaded_list = json.loads(storage_bridge)
+        if isinstance(loaded_list, list) and len(loaded_list) > 0:
+            st.session_state.scitani_data = loaded_list
+            st.session_state.js_executed = True
+            st.rerun() # Jeden rychlý refresh, ať se data okamžitě vykreslí v tabulce
+    except Exception:
+        pass
+
+# Pokud se vymaže paměť tlačítkem dole, musíme povolit opětovné načtení příště
+if not st.session_state.scitani_data and st.session_state.js_executed:
+    st.session_state.js_executed = False
 
 # Výchozí hodnoty pro reset formuláře
 if "mod_dopravy_key" not in st.session_state:
@@ -175,7 +194,7 @@ vek = st.segmented_control(
 # Skupina přesunutá dolů nad akční tlačítka
 ve_skupine = st.checkbox("👥 Šli ve skupině s předchozím zadaným", key="ve_skupine_key")
 
-# Poznámka a Sčítač
+# Jméno sčítače a Poznámka vedle sebe
 col_scit, col_pozn = st.columns(2)
 with col_scit:
     scitac = st.selectbox("Jméno sčítače", seznam_scitacu, key="vyber_scitace_widget", label_visibility="collapsed")
@@ -244,7 +263,7 @@ def zpracuj_kliknuti(smer):
     
     st.session_state.scitani_data.append(zaznam)
     
-    # Bezpečný tichý zápis na pozadí
+    # Bezpečný tichý zápis na pozadí do paměti prohlížeče
     js_save = f"""
     <script>
     localStorage.setItem('scitani_backup', JSON.stringify({json.dumps(st.session_state.scitani_data)}));
@@ -283,6 +302,7 @@ with col_odchod:
 def smazat_vsechno():
     st.session_state.scitani_data = []
     st.session_state.aktualni_id_skupiny = None
+    st.session_state.js_executed = False
 
 st.write("")
 if st.button("🗑️ Vymazat historii a začít znova", use_container_width=True):
